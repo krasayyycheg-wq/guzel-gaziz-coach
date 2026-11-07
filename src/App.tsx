@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { captureUtmFromUrl } from './utils/utm';
 import { Layout } from './components/Layout';
 import { HomePage } from './pages/HomePage';
 import { AboutPage } from './pages/AboutPage';
@@ -21,6 +22,10 @@ function ScrollToTop() {
 }
 
 function App() {
+  useEffect(() => {
+    captureUtmFromUrl();
+  }, []);
+
   return (
     <BrowserRouter>
       <ScrollToTop />

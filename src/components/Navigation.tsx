@@ -30,6 +30,29 @@ export function Navigation() {
     setIsMobileMenuOpen(false);
   }, [location]);
 
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+
+    const main = document.querySelector('main');
+    const footer = document.querySelector('footer');
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    main?.setAttribute('inert', '');
+    footer?.setAttribute('inert', '');
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsMobileMenuOpen(false);
+    };
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      main?.removeAttribute('inert');
+      footer?.removeAttribute('inert');
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isMobileMenuOpen]);
+
   const isActive = (path: string) =>
     path === '/programs'
       ? location.pathname.startsWith('/programs')
@@ -102,7 +125,9 @@ export function Navigation() {
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 className="md:hidden p-2 text-white"
-                aria-label="Toggle menu"
+                aria-label={isMobileMenuOpen ? 'Закрыть меню' : 'Открыть меню'}
+                aria-expanded={isMobileMenuOpen}
+                aria-controls="mobile-menu"
               >
                 {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
@@ -115,6 +140,10 @@ export function Navigation() {
       <AnimatePresence>
         {isMobileMenuOpen && (
           <motion.div
+            id="mobile-menu"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Меню"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}

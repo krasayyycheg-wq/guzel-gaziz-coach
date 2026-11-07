@@ -8,7 +8,7 @@ import { ApplicationForm } from '../components/ApplicationForm';
 import { PROGRAMS } from '../data/programs';
 
 const trustStats = [
-  { value: '10+', label: 'лет практики' },
+  { value: '10+', label: 'лет коучинговой практики' },
   { value: '500+', label: 'часов коучинга' },
   { value: '100+', label: 'клиентов' },
   { value: 'ICF', label: 'сертификация' },
@@ -33,8 +33,8 @@ const journeySteps = [
     number: '03',
     title: 'Проверьте, ваше ли это',
     text: 'Пройдите тест и получите персональный отчёт, который подскажет, нужна ли вам программа и с чего лучше начать.',
+    linkText: 'Пройти тест',
     to: '/test/life-ownership-index',
-    noLink: true,
   },
 ];
 
@@ -77,7 +77,7 @@ export function HomePage() {
       <HeroSection imageSrc="/images/trainer.png" />
 
       {/* 2. С чего начать */}
-      <section id="journey" className="py-14 sm:py-20 border-y border-white/5">
+      <section id="journey" className="py-14 sm:py-20">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <motion.div
             initial={reducedMotion ? false : { opacity: 0, y: 20 }}
@@ -103,37 +103,25 @@ export function HomePage() {
                 viewport={{ once: true, margin: '-60px' }}
                 transition={{ delay: index * 0.12, duration: 0.5, ease: 'easeOut' }}
               >
-                {step.noLink ? (
-                  <div className="group block h-full card-glass rounded-2xl p-6 sm:p-8 transition-colors duration-300 hover:border-accent/40">
-                    <div className="flex items-center justify-between mb-5">
-                      <span className="font-mono text-4xl font-bold text-accent/30 group-hover:text-accent transition-colors duration-300">
-                        {step.number}
-                      </span>
-                    </div>
-                    <h3 className="text-lg sm:text-xl font-bold text-white mb-2">{step.title}</h3>
-                    <p className="text-text-secondary text-sm leading-relaxed">{step.text}</p>
-                  </div>
-                ) : (
-                  <Link
-                    to={step.to!}
-                    className="group block h-full card-glass rounded-2xl p-6 sm:p-8 transition-colors duration-300 hover:border-accent/40"
-                  >
-                    <div className="flex items-center justify-between mb-5">
-                      <span className="font-mono text-4xl font-bold text-accent/30 group-hover:text-accent transition-colors duration-300">
-                        {step.number}
-                      </span>
-                    </div>
-                    <h3 className="text-lg sm:text-xl font-bold text-white mb-2">{step.title}</h3>
-                    <p className="text-text-secondary text-sm leading-relaxed mb-5">{step.text}</p>
-                    <span className="inline-flex items-center gap-2 text-accent text-sm font-semibold">
-                      {step.linkText}
-                      <ArrowRight
-                        size={16}
-                        className="transition-transform duration-300 group-hover:translate-x-1"
-                      />
+                <Link
+                  to={step.to}
+                  className="group block h-full card-glass rounded-2xl p-6 sm:p-8 transition-colors duration-300 hover:border-accent/40"
+                >
+                  <div className="flex items-center justify-between mb-5">
+                    <span className="font-mono text-4xl font-bold text-accent/30 group-hover:text-accent transition-colors duration-300">
+                      {step.number}
                     </span>
-                  </Link>
-                )}
+                  </div>
+                  <h3 className="text-lg sm:text-xl font-bold text-white mb-2">{step.title}</h3>
+                  <p className="text-text-secondary text-sm leading-relaxed mb-5">{step.text}</p>
+                  <span className="inline-flex items-center gap-2 text-accent text-sm font-semibold">
+                    {step.linkText}
+                    <ArrowRight
+                      size={16}
+                      className="transition-transform duration-300 group-hover:translate-x-1"
+                    />
+                  </span>
+                </Link>
               </motion.div>
             ))}
           </div>
@@ -167,7 +155,7 @@ export function HomePage() {
       </section>
 
       {/* 4. Блок доверия */}
-      <section id="trust" className="py-16 sm:py-24 border-y border-white/5">
+      <section id="trust" className="py-16 sm:py-24">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <motion.div
             initial={reducedMotion ? false : { opacity: 0, y: 20 }}
@@ -221,7 +209,7 @@ export function HomePage() {
       </section>
 
       {/* 5. FAQ */}
-      <section id="faq" className="py-16 sm:py-24 border-t border-white/5">
+      <section id="faq" className="py-16 sm:py-24">
         <div className="max-w-3xl mx-auto px-4 sm:px-6">
           <motion.div
             initial={reducedMotion ? false : { opacity: 0, y: 20 }}
@@ -286,7 +274,7 @@ export function HomePage() {
       </section>
 
       {/* 6. Telegram-сообщество */}
-      <section id="announcements" className="py-16 sm:py-24 border-t border-white/5">
+      <section id="announcements" className="py-16 sm:py-24">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <motion.div
             initial={reducedMotion ? false : { opacity: 0, y: 20 }}
@@ -343,7 +331,7 @@ export function HomePage() {
       </section>
 
       {/* 7. Финальный CTA */}
-      <section className="py-16 sm:py-24 border-t border-white/5">
+      <section className="py-16 sm:py-24">
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
             <motion.div

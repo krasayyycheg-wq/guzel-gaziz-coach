@@ -135,7 +135,7 @@ export function LifeStrategyPage() {
       />
 
       {/* Для кого программа */}
-      <section id="about" className="py-16 sm:py-24 border-y border-white/5">
+      <section id="about" className="py-16 sm:py-24">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <motion.div
             initial={reducedMotion ? false : { opacity: 0, y: 20 }}
@@ -243,7 +243,7 @@ export function LifeStrategyPage() {
       </section>
 
       {/* Формат и стоимость */}
-      <section className="py-16 sm:py-24 border-y border-white/5">
+      <section className="py-16 sm:py-24">
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <motion.div
             initial={reducedMotion ? false : { opacity: 0, y: 20 }}

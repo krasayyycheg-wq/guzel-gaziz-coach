@@ -236,42 +236,6 @@ export function AnimatedBackground() {
         style={{ opacity: 1 }}
       />
 
-      {/* Дрейфующие градиентные ауры (яркие) */}
-      <motion.div
-        animate={{
-          scale: [1, 1.2, 1],
-          x: [0, 50, 0],
-          y: [0, -30, 0],
-        }}
-        transition={{
-          duration: 24,
-          repeat: Infinity,
-          ease: 'easeInOut',
-        }}
-        className="absolute -top-1/4 -right-1/4 w-[600px] h-[600px] sm:w-[900px] sm:h-[900px] rounded-full"
-        style={{
-          background: 'radial-gradient(circle, rgba(255,214,0,0.18) 0%, rgba(255,214,0,0.06) 50%, transparent 70%)',
-          filter: 'blur(60px)',
-        }}
-      />
-      <motion.div
-        animate={{
-          scale: [1, 1.3, 1],
-          x: [0, -40, 0],
-          y: [0, 40, 0],
-        }}
-        transition={{
-          duration: 28,
-          repeat: Infinity,
-          ease: 'easeInOut',
-          delay: 3,
-        }}
-        className="absolute -bottom-1/4 -left-1/4 w-[500px] h-[500px] sm:w-[800px] sm:h-[800px] rounded-full"
-        style={{
-          background: 'radial-gradient(circle, rgba(255,214,0,0.15) 0%, rgba(255,224,51,0.05) 50%, transparent 70%)',
-          filter: 'blur(80px)',
-        }}
-      />
       <motion.div
         animate={{
           scale: [1, 1.1, 1],

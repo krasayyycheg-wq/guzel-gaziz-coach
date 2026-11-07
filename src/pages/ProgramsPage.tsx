@@ -26,7 +26,7 @@ export function ProgramsPage() {
             Каталог программ
           </h1>
           <p className="text-text-secondary max-w-2xl mx-auto text-base sm:text-lg leading-relaxed">
-            Индивидуальные программы коучинга — от личной стратегии развития
+            Индивидуальные и групповые программы коучинга — от личной стратегии развития
             до мастерства публичных выступлений.
           </p>
           <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-accent/5 rounded-full border border-accent/10">

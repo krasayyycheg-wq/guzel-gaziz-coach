@@ -32,6 +32,5 @@ export const PROGRAMS: ProgramInfo[] = [
       'Уверенность на сцене, убедительная подача идей и умение вовлекать аудиторию в диалог.',
     format: '5 модулей · практика на реальных выступлениях',
     type: 'group',
-    testSlug: '/test/life-ownership-index',
   },
 ];

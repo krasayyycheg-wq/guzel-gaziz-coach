@@ -7,6 +7,8 @@ import { QuizReport } from './QuizReport';
 import { ContactForm } from './ContactForm';
 import { QUESTIONS } from '../../data/testData';
 import { calculateTestResult } from '../../utils/calculations';
+import { reachGoal } from '../../utils/metrika';
+import { sendLead } from '../../lib/lead';
 import type { TestResult } from '../../types/test';
 
 type QuizStep = 'welcome' | 'questions' | 'contact' | 'calculating' | 'report';
@@ -18,6 +20,7 @@ export function Quiz() {
   const [result, setResult] = useState<TestResult | null>(null);
 
   const handleStart = useCallback(() => {
+    reachGoal('quiz_start');
     setStep('questions');
     setCurrentQuestion(0);
   }, []);
@@ -43,33 +46,62 @@ export function Quiz() {
   }, [currentQuestion]);
 
   const handleContactSubmit = useCallback(async (contactData: { name: string; email: string; phone?: string }) => {
-    // Save contact data along with answers
-    console.log('Contact data:', contactData);
     setStep('calculating');
-    
+
     // Simulate calculation delay
     await new Promise((resolve) => setTimeout(resolve, 3000));
-    
+
     const testResult = calculateTestResult(answers);
     setResult(testResult);
     setStep('report');
+    reachGoal('quiz_complete', { score: testResult.overallIndex });
+    reachGoal('quiz_lead');
+
+    sendLead({
+      type: 'quiz_contact',
+      name: contactData.name,
+      email: contactData.email,
+      phone: contactData.phone,
+      testScore: testResult.overallIndex,
+      testProfile: `${testResult.profile.key} · ${testResult.profile.name}`,
+    }).catch((error) => {
+      console.error('[Quiz] Не удалось отправить контакт после теста:', error);
+    });
   }, [answers]);
 
   const handleSkipContact = useCallback(async () => {
     setStep('calculating');
-    
+
     await new Promise((resolve) => setTimeout(resolve, 3000));
-    
+
     const testResult = calculateTestResult(answers);
     setResult(testResult);
     setStep('report');
+    reachGoal('quiz_complete', { score: testResult.overallIndex });
+
+    // Обезличенный результат теста: без имени и контактов
+    sendLead({
+      type: 'quiz_result',
+      testScore: testResult.overallIndex,
+      testProfile: `${testResult.profile.key} · ${testResult.profile.name}`,
+    }).catch((error) => {
+      console.error('[Quiz] Не удалось отправить результат теста:', error);
+    });
   }, [answers]);
 
   const handleSaveResult = useCallback((email: string) => {
-    console.log('Save result to email:', email);
-    // TODO: Implement email sending
-    alert('Результат будет отправлен на ' + email);
-  }, []);
+    reachGoal('quiz_report_save');
+    if (result) {
+      sendLead({
+        type: 'quiz_result',
+        email,
+        testScore: result.overallIndex,
+        testProfile: `${result.profile.key} · ${result.profile.name}`,
+      }).catch((error) => {
+        console.error('[Quiz] Не удалось отправить запрос отчёта:', error);
+      });
+    }
+  }, [result]);
 
   return (
     <section className="min-h-[80dvh] py-8 sm:py-16" id="quiz">

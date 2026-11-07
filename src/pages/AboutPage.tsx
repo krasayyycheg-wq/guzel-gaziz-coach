@@ -103,7 +103,7 @@ export function AboutPage() {
       </section>
 
       {/* Биография */}
-      <section className="py-16 sm:py-24 bg-bg-secondary">
+      <section className="py-16 sm:py-24">
         <div className="max-w-3xl mx-auto px-4 sm:px-6">
           <div>
             <h2 className="text-2xl sm:text-3xl font-bold text-white mb-8">Биография</h2>
@@ -167,7 +167,7 @@ export function AboutPage() {
       </section>
 
       {/* Подход к работе */}
-      <section className="py-16 sm:py-24 bg-bg-secondary">
+      <section className="py-16 sm:py-24">
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-12 sm:mb-16">
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-4">
@@ -206,7 +206,7 @@ export function AboutPage() {
       </section>
 
       {/* CTA */}
-      <section className="py-16 sm:py-24 bg-bg-secondary">
+      <section className="py-16 sm:py-24">
         <div className="max-w-4xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
             <div className="text-center lg:text-left">

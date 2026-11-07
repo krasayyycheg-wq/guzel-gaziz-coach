@@ -4,8 +4,10 @@
  * (localStorage 'cookie_consent' === 'all'). В index.html сниппет не вставляется.
  */
 
-// TODO: указать ID счётчика
-export const YANDEX_METRIKA_ID = 0;
+// ID счётчика задаётся через VITE_YANDEX_METRIKA_ID (см. .env.example).
+// Пустое/невалидное значение — Метрика не загружается.
+const envId = Number(import.meta.env.VITE_YANDEX_METRIKA_ID);
+export const YANDEX_METRIKA_ID = Number.isFinite(envId) && envId > 0 ? envId : 0;
 
 const METRIKA_SRC = 'https://mc.yandex.ru/metrika/tag.js';
 
@@ -63,4 +65,13 @@ export function loadMetrika(): void {
     accurateTrackBounce: true,
     webvisor: true,
   });
+}
+
+/**
+ * Достижение цели Метрики. Безопасно вызывать в любом месте:
+ * если счётчик не загружен (нет ID или нет согласия на cookies) — no-op.
+ */
+export function reachGoal(target: string, params?: Record<string, unknown>): void {
+  if (typeof window === 'undefined' || !YANDEX_METRIKA_ID || !window.ym) return;
+  window.ym(YANDEX_METRIKA_ID, 'reachGoal', target, params);
 }

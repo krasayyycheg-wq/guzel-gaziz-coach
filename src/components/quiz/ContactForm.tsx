@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { motion } from 'framer-motion';
 import { ArrowRight, User, Mail, Phone, Shield } from 'lucide-react';
-import { useState } from 'react';
+import { useId, useState } from 'react';
 
 const contactSchema = z.object({
   name: z.string().min(2, 'Имя должно содержать минимум 2 символа').max(50, 'Имя слишком длинное'),
@@ -21,6 +21,7 @@ interface ContactFormProps {
 
 export function ContactForm({ onSubmit, onSkip }: ContactFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const formId = useId();
   const {
     register,
     handleSubmit,
@@ -59,12 +60,13 @@ export function ContactForm({ onSubmit, onSkip }: ContactFormProps) {
 
       <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-5">
         <div>
-          <label className="flex items-center gap-2 text-sm text-text-secondary mb-2">
+          <label htmlFor={`${formId}-name`} className="flex items-center gap-2 text-sm text-text-secondary mb-2">
             <User size={16} />
             Имя *
           </label>
           <input
             {...register('name')}
+            id={`${formId}-name`}
             type="text"
             placeholder="Ваше имя"
             className="w-full px-4 py-3 bg-bg-card border border-border rounded-lg text-white placeholder-text-muted focus:outline-none focus:border-accent transition-colors"
@@ -75,12 +77,13 @@ export function ContactForm({ onSubmit, onSkip }: ContactFormProps) {
         </div>
 
         <div>
-          <label className="flex items-center gap-2 text-sm text-text-secondary mb-2">
+          <label htmlFor={`${formId}-email`} className="flex items-center gap-2 text-sm text-text-secondary mb-2">
             <Mail size={16} />
             Email *
           </label>
           <input
             {...register('email')}
+            id={`${formId}-email`}
             type="email"
             placeholder="your@email.com"
             className="w-full px-4 py-3 bg-bg-card border border-border rounded-lg text-white placeholder-text-muted focus:outline-none focus:border-accent transition-colors"
@@ -91,12 +94,13 @@ export function ContactForm({ onSubmit, onSkip }: ContactFormProps) {
         </div>
 
         <div>
-          <label className="flex items-center gap-2 text-sm text-text-secondary mb-2">
+          <label htmlFor={`${formId}-phone`} className="flex items-center gap-2 text-sm text-text-secondary mb-2">
             <Phone size={16} />
             Телефон
           </label>
           <input
             {...register('phone')}
+            id={`${formId}-phone`}
             type="tel"
             placeholder="+7 (999) 999-99-99"
             className="w-full px-4 py-3 bg-bg-card border border-border rounded-lg text-white placeholder-text-muted focus:outline-none focus:border-accent transition-colors"

@@ -1,0 +1,197 @@
+import { z } from 'zod';
+
+/**
+ * Приём заявок и результатов теста.
+ *
+ * Роутинг: POST /api/lead (Vercel Serverless Function).
+ *
+ * Доставка:
+ *  1. Telegram — сообщение в чат/группу коуча (TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID).
+ *  2. Яндекс Таблицы — официального write-API у Яндекс Таблиц нет, поэтому
+ *     используется официальный API Яндекс Форм: ответ программно добавляется
+ *     в форму (POST /forms/{id}/responses), которая связана с Яндекс Таблицей
+ *     (в настройках формы: «Ответы» → связать с таблицей). Требуются
+ *     YANDEX_FORMS_OAUTH_TOKEN и YANDEX_FORMS_FORM_ID.
+ *
+ * Обе доставки опциональны: если переменные не заданы, функция отвечает 200
+ * с delivered: { telegram: false, yandex_forms: false }, а лид пишется в лог
+ * функции (Vercel → Logs), чтобы ничего не терялось беззвучно.
+ */
+
+const leadSchema = z.object({
+  type: z.enum(['application', 'quiz_contact', 'quiz_result']),
+  name: z.string().max(100).optional(),
+  email: z.string().email().max(200).optional(),
+  phone: z.string().max(30).optional(),
+  program: z.string().max(100).optional(),
+  testScore: z.number().int().min(0).max(100).optional(),
+  testProfile: z.string().max(200).optional(),
+  message: z.string().max(3000).optional(),
+  page: z.string().max(300).optional(),
+  utm: z.record(z.string(), z.string().max(300)).optional(),
+  timestamp: z.string().max(50).optional(),
+});
+
+type Lead = z.infer<typeof leadSchema>;
+
+const PROGRAM_LABELS: Record<string, string> = {
+  'life-strategy': 'Личная стратегия развития',
+  'public-speaking': 'Публичные выступления',
+  general: 'Общая заявка',
+};
+
+const TYPE_LABELS: Record<Lead['type'], string> = {
+  application: 'Заявка на программу',
+  quiz_contact: 'Тест пройден + контакт',
+  quiz_result: 'Тест пройден (без контакта)',
+};
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+}
+
+function formatTelegramMessage(lead: Lead): string {
+  const lines: string[] = [];
+  lines.push(`<b>${TYPE_LABELS[lead.type]}</b>`);
+
+  if (lead.name) lines.push(`Имя: ${escapeHtml(lead.name)}`);
+  if (lead.email) lines.push(`Email: ${escapeHtml(lead.email)}`);
+  if (lead.phone) lines.push(`Телефон: ${escapeHtml(lead.phone)}`);
+  if (lead.program) {
+    lines.push(`Программа: ${escapeHtml(PROGRAM_LABELS[lead.program] ?? lead.program)}`);
+  }
+  if (lead.testScore !== undefined) lines.push(`Индекс владения жизнью: ${lead.testScore}%`);
+  if (lead.testProfile) lines.push(`Профиль: ${escapeHtml(lead.testProfile)}`);
+  if (lead.message) lines.push(`Сообщение: ${escapeHtml(lead.message)}`);
+
+  lines.push(
+    `Страница: ${escapeHtml(lead.page ?? '—')} · ${escapeHtml(
+      lead.timestamp ?? new Date().toISOString(),
+    )}`,
+  );
+
+  const utm = Object.entries(lead.utm ?? {});
+  if (utm.length > 0) {
+    lines.push(`UTM: ${utm.map(([k, v]) => `${k}=${escapeHtml(v)}`).join(', ')}`);
+  }
+
+  return lines.join('\n');
+}
+
+/** Плоский текст лида для Яндекс Форм (одно поле «Данные заявки»). */
+function formatPlainText(lead: Lead): string {
+  return formatTelegramMessage(lead)
+    .replaceAll(/<\/?b>/g, '')
+    .replaceAll(/&amp;/g, '&')
+    .replaceAll(/&lt;/g, '<')
+    .replaceAll(/&gt;/g, '>')
+    .replaceAll(/&quot;/g, '"');
+}
+
+async function sendTelegram(text: string): Promise<boolean> {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!token || !chatId) return false;
+
+  const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      text,
+      parse_mode: 'HTML',
+      disable_web_page_preview: true,
+    }),
+  });
+  return response.ok;
+}
+
+interface YandexFormQuestion {
+  id?: string;
+  label?: { question?: string };
+}
+
+/**
+ * Добавляет ответ в Яндекс Форму, связанную с Яндекс Таблицей.
+ * В форме должно быть одно текстовое поле с вопросом, содержащим
+ * «заявка» / «данные» / «лид» (иначе берётся первый вопрос формы).
+ */
+async function sendToYandexForms(text: string): Promise<boolean> {
+  const token = process.env.YANDEX_FORMS_OAUTH_TOKEN;
+  const formId = process.env.YANDEX_FORMS_FORM_ID;
+  if (!token || !formId) return false;
+
+  const base = `https://forms.yandex.net/api/v1/forms/${formId}`;
+  const auth = { Authorization: `OAuth ${token}` };
+
+  const formResponse = await fetch(base, { headers: auth });
+  if (!formResponse.ok) {
+    console.error('[lead] Yandex Forms: не удалось получить структуру формы', formResponse.status);
+    return false;
+  }
+  const form = (await formResponse.json()) as { questions?: YandexFormQuestion[] };
+  const questions = form.questions ?? [];
+  if (questions.length === 0) return false;
+
+  const target =
+    questions.find((q) => /заявк|данн|лид/i.test(q.label?.question ?? '')) ?? questions[0];
+  if (!target.id) return false;
+
+  const importResponse = await fetch(`${base}/responses`, {
+    method: 'POST',
+    headers: { ...auth, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ data: { [target.id]: { value: [text] } } }),
+  });
+  if (!importResponse.ok) {
+    console.error('[lead] Yandex Forms: не удалось добавить ответ', importResponse.status);
+    return false;
+  }
+  return true;
+}
+
+export default async function handler(request: Request): Promise<Response> {
+  if (request.method !== 'POST') {
+    return Response.json({ ok: false, error: 'method_not_allowed' }, { status: 405 });
+  }
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ ok: false, error: 'invalid_json' }, { status: 400 });
+  }
+
+  const parsed = leadSchema.safeParse(body);
+  if (!parsed.success) {
+    return Response.json({ ok: false, error: 'invalid_payload' }, { status: 422 });
+  }
+  const lead = parsed.data;
+
+  const telegramText = formatTelegramMessage(lead);
+  const plainText = formatPlainText(lead);
+
+  const delivered = { telegram: false, yandex_forms: false };
+
+  try {
+    delivered.telegram = await sendTelegram(telegramText);
+  } catch (error) {
+    console.error('[lead] Telegram delivery error:', error);
+  }
+
+  try {
+    delivered.yandex_forms = await sendToYandexForms(plainText);
+  } catch (error) {
+    console.error('[lead] Yandex Forms delivery error:', error);
+  }
+
+  if (!delivered.telegram && !delivered.yandex_forms) {
+    // Ни один канал не настроен — лид остаётся в логах функции
+    console.warn('[lead] Получен лид, но каналы доставки не настроены:', plainText);
+  }
+
+  return Response.json({ ok: true, delivered });
+}

@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import { ArrowDown } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { GlowButton } from './GlowButton';
 
 interface HeroSectionProps {
@@ -30,6 +30,7 @@ export function HeroSection({
   children,
 }: HeroSectionProps) {
   const reducedMotion = useReducedMotion();
+  const navigate = useNavigate();
   const sectionRef = useRef<HTMLElement>(null);
 
   // Fade on scroll for homepage hero
@@ -178,7 +179,7 @@ export function HeroSection({
                   transition={{ duration: 0.5, delay: 0.5 }}
                   className="text-base sm:text-lg text-text-secondary leading-relaxed mb-6 max-w-2xl mx-auto"
                 >
-                  Мои основные специалитеты: построение личного трека развития и публичные
+                  Мои основные специализации: построение личного трека развития и публичные
                   выступления. Работаю с людьми, которые внешне успешны, но внутри чувствуют:
                   жизнь идёт не по их сценарию. Моя задача — помочь вам услышать себя, опереться
                   на свои ценности и выстроить стратегию, в которой вы — автор, а не исполнитель
@@ -232,9 +233,9 @@ export function HeroSection({
                 transition={{ duration: 0.5, delay: 0.7 }}
                 className="flex flex-col sm:flex-row gap-3 justify-center items-center"
               >
-                <Link to="/about">
-                  <GlowButton variant="outline">Обо мне</GlowButton>
-                </Link>
+                <GlowButton variant="outline" onClick={() => navigate('/about')}>
+                  Обо мне
+                </GlowButton>
                 <GlowButton variant="outline" onClick={() => scrollTo('journey')}>
                   С чего начать
                 </GlowButton>

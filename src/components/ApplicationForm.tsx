@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useId, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { sendLead } from '../lib/lead';
+import { reachGoal } from '../utils/metrika';
 import {
   ArrowRight,
   CheckCircle2,
@@ -33,37 +35,6 @@ const applicationSchema = z.object({
 
 type ApplicationFormData = z.infer<typeof applicationSchema>;
 
-interface ApplicationPayload extends ApplicationFormData {
-  program: string;
-  timestamp: string;
-  page: string;
-  utm: Record<string, string>;
-}
-
-function collectUtmParams(): Record<string, string> {
-  const params = new URLSearchParams(window.location.search);
-  const utm: Record<string, string> = {};
-  ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'].forEach((key) => {
-    const value = params.get(key);
-    if (value) utm[key] = value;
-  });
-  return utm;
-}
-
-// TODO(этап 2 — интеграция заявок): заменить заглушку на реальный fetch
-// на российский endpoint, например:
-//   await fetch('/api/submit-form', {
-//     method: 'POST',
-//     headers: { 'Content-Type': 'application/json' },
-//     body: JSON.stringify(payload),
-//   });
-// Целевая цепочка: Vercel Function (api/submit-form.ts) → Google Apps Script → Яндекс Таблица.
-async function submitApplication(payload: ApplicationPayload): Promise<void> {
-  console.log('[ApplicationForm] Заявка (payload для будущего endpoint):', payload);
-  // Имитация сетевого запроса
-  await new Promise((resolve) => setTimeout(resolve, 900));
-}
-
 type FormStatus = 'idle' | 'loading' | 'success' | 'error';
 
 interface ApplicationFormProps {
@@ -75,6 +46,7 @@ interface ApplicationFormProps {
 
 export function ApplicationForm({ program = 'general', compact = false }: ApplicationFormProps) {
   const [status, setStatus] = useState<FormStatus>('idle');
+  const formId = useId();
   const {
     register,
     handleSubmit,
@@ -94,13 +66,14 @@ export function ApplicationForm({ program = 'general', compact = false }: Applic
   const onSubmit = async (data: ApplicationFormData) => {
     setStatus('loading');
     try {
-      await submitApplication({
-        ...data,
+      await sendLead({
+        type: 'application',
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
         program,
-        timestamp: new Date().toISOString(),
-        page: window.location.pathname,
-        utm: collectUtmParams(),
       });
+      reachGoal('application_submit', { program });
       setStatus('success');
     } catch (error) {
       console.error('[ApplicationForm] Ошибка отправки:', error);
@@ -138,12 +111,13 @@ export function ApplicationForm({ program = 'general', compact = false }: Applic
       <input type="hidden" value={program} readOnly />
 
       <div>
-        <label className="flex items-center gap-2 text-sm text-text-secondary mb-2">
+        <label htmlFor={`${formId}-name`} className="flex items-center gap-2 text-sm text-text-secondary mb-2">
           <User size={16} />
           Имя *
         </label>
         <input
           {...register('name')}
+          id={`${formId}-name`}
           type="text"
           placeholder="Ваше имя"
           autoComplete="name"
@@ -153,12 +127,13 @@ export function ApplicationForm({ program = 'general', compact = false }: Applic
       </div>
 
       <div>
-        <label className="flex items-center gap-2 text-sm text-text-secondary mb-2">
+        <label htmlFor={`${formId}-email`} className="flex items-center gap-2 text-sm text-text-secondary mb-2">
           <Mail size={16} />
           Email *
         </label>
         <input
           {...register('email')}
+          id={`${formId}-email`}
           type="email"
           placeholder="your@email.com"
           autoComplete="email"
@@ -168,12 +143,13 @@ export function ApplicationForm({ program = 'general', compact = false }: Applic
       </div>
 
       <div>
-        <label className="flex items-center gap-2 text-sm text-text-secondary mb-2">
+        <label htmlFor={`${formId}-phone`} className="flex items-center gap-2 text-sm text-text-secondary mb-2">
           <Phone size={16} />
           Телефон
         </label>
         <input
           {...register('phone')}
+          id={`${formId}-phone`}
           type="tel"
           placeholder="+7 (999) 999-99-99"
           autoComplete="tel"

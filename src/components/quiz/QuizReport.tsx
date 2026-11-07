@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ArrowRight, Download, Mail, Share2, ChevronDown, ChevronUp } from 'lucide-react';
 import type { TestResult } from '../../types/test';
@@ -16,6 +16,7 @@ interface QuizReportProps {
 }
 
 export function QuizReport({ result, onSave }: QuizReportProps) {
+  const navigate = useNavigate();
   const reportRef = useRef<HTMLDivElement>(null);
   const printableRef = useRef<HTMLDivElement>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -66,16 +67,55 @@ export function QuizReport({ result, onSave }: QuizReportProps) {
     try {
       const canvas = await capturePrintable();
       if (!canvas) return;
-      const imgData = canvas.toDataURL('image/png');
+
       const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgWidth = 210;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      const pageWidthMm = 210;
+      const pageHeightMm = 297;
+      const pageHeightPx = Math.floor((canvas.width * pageHeightMm) / pageWidthMm);
+      let pageNumber = 0;
+
+      for (let sourceY = 0; sourceY < canvas.height; sourceY += pageHeightPx) {
+        const sourceHeight = Math.min(pageHeightPx, canvas.height - sourceY);
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = sourceHeight;
+
+        const context = pageCanvas.getContext('2d');
+        if (!context) throw new Error('Не удалось подготовить страницу PDF');
+
+        context.fillStyle = '#FFFFFF';
+        context.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+        context.drawImage(
+          canvas,
+          0,
+          sourceY,
+          canvas.width,
+          sourceHeight,
+          0,
+          0,
+          canvas.width,
+          sourceHeight,
+        );
+
+        if (pageNumber > 0) pdf.addPage();
+        const renderedHeightMm = (sourceHeight * pageWidthMm) / canvas.width;
+        pdf.addImage(
+          pageCanvas.toDataURL('image/png'),
+          'PNG',
+          0,
+          0,
+          pageWidthMm,
+          renderedHeightMm,
+        );
+        pageNumber += 1;
+      }
+
       pdf.save(`result-${result.profile.key}.pdf`);
     } catch (error) {
       console.error('Error saving PDF:', error);
+    } finally {
+      setIsSaving(false);
     }
-    setIsSaving(false);
   };
 
   const handleEmailSave = () => {
@@ -388,12 +428,14 @@ export function QuizReport({ result, onSave }: QuizReportProps) {
             Программа «Личная стратегия развития» превращает эту карту в маршрут: 5 индивидуальных сессий, на которых мы соберём вашу стратегию из ценностей, сильных сторон и образа будущего.
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
-            <Link to="/programs/life-strategy" className="flex-1">
-              <GlowButton variant="outline" className="w-full">
-                Подробнее о программе
-                <ArrowRight size={18} />
-              </GlowButton>
-            </Link>
+            <GlowButton
+              onClick={() => navigate('/programs/life-strategy')}
+              variant="outline"
+              className="flex-1 w-full"
+            >
+              Подробнее о программе
+              <ArrowRight size={18} />
+            </GlowButton>
             <div className="flex-1">
               <GlowButton onClick={() => setIsApplicationOpen(true)} variant="primary" className="w-full">
                 Подать заявку
@@ -514,19 +556,22 @@ export function QuizReport({ result, onSave }: QuizReportProps) {
           </h1>
           <div
             style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '12px',
+              display: 'inline-block',
+              textAlign: 'center',
               background: '#F5F5F5',
               borderRadius: '16px',
               padding: '16px 28px',
               border: '1px solid #E0E0E0',
+              fontSize: '36px',
+              fontWeight: 700,
+              color: '#B8860B',
             }}
           >
-            <div>
-              <div style={{ fontSize: '36px', fontWeight: 700, color: '#B8860B' }}>{result.overallIndex}%</div>
-              <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>Индекс присвоенности</div>
-            </div>
+            {result.overallIndex}%
+            <br />
+            <span style={{ fontSize: '12px', fontWeight: 400, color: '#666' }}>
+              Индекс присвоенности
+            </span>
           </div>
         </div>
 

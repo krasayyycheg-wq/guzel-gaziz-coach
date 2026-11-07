@@ -21,22 +21,20 @@ const answerLabels = [
 ];
 
 const answerGradients = [
-  // 1–2 — negative (red gradient, shared)
-  { bg: 'linear-gradient(135deg, rgba(239,68,68,0.25), rgba(153,27,27,0.15))', border: 'rgba(239,68,68,0.5)', text: '#fca5a5' },
-  { bg: 'linear-gradient(135deg, rgba(239,68,68,0.25), rgba(153,27,27,0.15))', border: 'rgba(239,68,68,0.5)', text: '#fca5a5' },
-  // 3 — neutral (slate)
+  // Пять ступеней: красный → оранжевый → нейтральный → лаймовый → зелёный
+  { bg: 'linear-gradient(135deg, rgba(239,68,68,0.28), rgba(153,27,27,0.15))', border: 'rgba(239,68,68,0.55)', text: '#fca5a5' },
+  { bg: 'linear-gradient(135deg, rgba(249,115,22,0.25), rgba(154,52,18,0.15))', border: 'rgba(249,115,22,0.5)', text: '#fdba74' },
   { bg: 'linear-gradient(135deg, rgba(148,163,184,0.2), rgba(71,85,105,0.15))', border: 'rgba(148,163,184,0.4)', text: '#cbd5e1' },
-  // 4–5 — positive (green gradient, shared)
-  { bg: 'linear-gradient(135deg, rgba(34,197,94,0.25), rgba(21,128,61,0.15))', border: 'rgba(34,197,94,0.5)', text: '#86efac' },
-  { bg: 'linear-gradient(135deg, rgba(34,197,94,0.25), rgba(21,128,61,0.15))', border: 'rgba(34,197,94,0.5)', text: '#86efac' },
+  { bg: 'linear-gradient(135deg, rgba(163,230,53,0.23), rgba(77,124,15,0.15))', border: 'rgba(163,230,53,0.5)', text: '#bef264' },
+  { bg: 'linear-gradient(135deg, rgba(16,185,129,0.27), rgba(6,95,70,0.16))', border: 'rgba(16,185,129,0.55)', text: '#6ee7b7' },
 ];
 
 const selectedGradients = [
-  { bg: 'linear-gradient(135deg, rgba(239,68,68,0.55), rgba(153,27,27,0.45))', border: 'rgba(239,68,68,0.9)', text: '#ffffff' },
-  { bg: 'linear-gradient(135deg, rgba(239,68,68,0.55), rgba(153,27,27,0.45))', border: 'rgba(239,68,68,0.9)', text: '#ffffff' },
+  { bg: 'linear-gradient(135deg, rgba(239,68,68,0.58), rgba(153,27,27,0.45))', border: 'rgba(239,68,68,0.95)', text: '#ffffff' },
+  { bg: 'linear-gradient(135deg, rgba(249,115,22,0.56), rgba(154,52,18,0.44))', border: 'rgba(249,115,22,0.95)', text: '#ffffff' },
   { bg: 'linear-gradient(135deg, rgba(148,163,184,0.5), rgba(71,85,105,0.4))', border: 'rgba(148,163,184,0.9)', text: '#ffffff' },
-  { bg: 'linear-gradient(135deg, rgba(34,197,94,0.55), rgba(21,128,61,0.45))', border: 'rgba(34,197,94,0.9)', text: '#ffffff' },
-  { bg: 'linear-gradient(135deg, rgba(34,197,94,0.55), rgba(21,128,61,0.45))', border: 'rgba(34,197,94,0.9)', text: '#ffffff' },
+  { bg: 'linear-gradient(135deg, rgba(163,230,53,0.5), rgba(77,124,15,0.42))', border: 'rgba(163,230,53,0.9)', text: '#ffffff' },
+  { bg: 'linear-gradient(135deg, rgba(16,185,129,0.56), rgba(6,95,70,0.45))', border: 'rgba(16,185,129,0.95)', text: '#ffffff' },
 ];
 
 export function QuizQuestionComponent({

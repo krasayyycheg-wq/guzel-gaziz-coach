@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Секреты окружения (интеграции: Telegram, Яндекс) — не коммитить
+.env
+.env.*
+!.env.example
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -24,3 +29,8 @@ dist-ssr
 *.sw?
 
 .vercel
+
+# Тестовые артефакты
+footer-check.png
+homepage-check.png
+test-downloads/
