@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowRight, Mic, Target, Users, Zap } from 'lucide-react';
 import { BackButton } from '../components/BackButton';
 import { HeroSection } from '../components/HeroSection';
 import { GlowButton } from '../components/GlowButton';
+import { ApplicationModal } from '../components/ApplicationForm';
 
 const audienceGroups = [
   {
@@ -115,6 +117,7 @@ const sessions = [
 export function LifeStrategyPage() {
   const navigate = useNavigate();
   const reducedMotion = useReducedMotion();
+  const [isApplicationOpen, setIsApplicationOpen] = useState(false);
 
   return (
     <div>
@@ -301,7 +304,7 @@ export function LifeStrategyPage() {
               </div>
 
               <div className="flex flex-col items-center gap-2">
-                <GlowButton onClick={() => navigate('/test/life-ownership-index')} variant="primary">
+                <GlowButton onClick={() => setIsApplicationOpen(true)} variant="primary">
                   Подать заявку
                 </GlowButton>
                 <span className="text-text-muted text-xs">Первая встреча бесплатная</span>
@@ -346,6 +349,12 @@ export function LifeStrategyPage() {
           </motion.div>
         </div>
       </section>
+
+      <ApplicationModal
+        isOpen={isApplicationOpen}
+        onClose={() => setIsApplicationOpen(false)}
+        program="life-strategy"
+      />
     </div>
   );
 }

@@ -417,7 +417,7 @@ export function QuizReport({ result, onSave }: QuizReportProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.85 }}
-          className="relative overflow-hidden bg-bg-card rounded-2xl border border-accent/20 p-6 sm:p-8 mb-10"
+          className="relative overflow-hidden bg-bg-primary rounded-2xl border border-accent/20 p-6 sm:p-8 mb-10"
         >
           <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-accent/10 blur-3xl pointer-events-none" />
           <h3 className="text-xl sm:text-2xl font-bold text-white mb-4">Что дальше?</h3>

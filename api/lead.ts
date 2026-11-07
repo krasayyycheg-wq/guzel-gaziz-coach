@@ -243,9 +243,14 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
   // Сначала таблица — она возвращает номер строки для кнопок статуса,
   // затем Telegram с кнопками «Связался / Позже».
+  // В таблицу пишем русское название программы вместо slug.
+  const sheetLead: Lead = {
+    ...lead,
+    program: lead.program ? (PROGRAM_LABELS[lead.program] ?? lead.program) : undefined,
+  };
   let sheetRow: number | undefined;
   try {
-    const sheets = await sendToGoogleSheets(lead);
+    const sheets = await sendToGoogleSheets(sheetLead);
     delivered.google_sheets = sheets.ok;
     sheetRow = sheets.row;
   } catch (error) {

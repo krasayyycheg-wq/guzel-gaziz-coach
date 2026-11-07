@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -261,7 +262,10 @@ export function ApplicationModal({
     };
   }, [isOpen, onClose]);
 
-  return (
+  // Портал в body: без него fixed-модалка позиционируется относительно
+  // анимированного родителя (transform от framer-motion) и может
+  // оказаться ПОД футером или обрезаться.
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -298,6 +302,7 @@ export function ApplicationModal({
           </motion.div>
         </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }

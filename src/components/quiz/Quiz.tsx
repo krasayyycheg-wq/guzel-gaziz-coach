@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { QuizWelcome } from './QuizWelcome';
 import { QuizQuestionComponent } from './QuizQuestion';
@@ -19,20 +19,33 @@ export function Quiz() {
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [result, setResult] = useState<TestResult | null>(null);
 
+  const advanceLock = useRef(false);
+
   const handleStart = useCallback(() => {
     reachGoal('quiz_start');
+    advanceLock.current = false;
+    setAnswers({});
+    setResult(null);
     setStep('questions');
     setCurrentQuestion(0);
   }, []);
 
   const handleAnswer = useCallback((value: number) => {
-    const questionId = QUESTIONS[currentQuestion].id;
-    setAnswers((prev) => ({ ...prev, [questionId]: value }));
+    // Защита от быстрых повторных кликов: пока идёт авто-переход,
+    // новые ответы игнорируем — иначе вопросы пропускаются, а индекс
+    // может уйти за пределы массива (белый экран).
+    if (advanceLock.current) return;
+    const question = QUESTIONS[currentQuestion];
+    if (!question) return;
+    advanceLock.current = true;
+
+    setAnswers((prev) => ({ ...prev, [question.id]: value }));
 
     // Auto-advance after selection
     setTimeout(() => {
+      advanceLock.current = false;
       if (currentQuestion < QUESTIONS.length - 1) {
-        setCurrentQuestion((prev) => prev + 1);
+        setCurrentQuestion((prev) => Math.min(prev + 1, QUESTIONS.length - 1));
       } else {
         setStep('contact');
       }
@@ -117,7 +130,7 @@ export function Quiz() {
           </motion.div>
         )}
 
-        {step === 'questions' && (
+        {step === 'questions' && QUESTIONS[currentQuestion] && (
           <motion.div
             key="questions"
             initial={{ opacity: 0 }}
