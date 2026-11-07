@@ -82,12 +82,25 @@ async function tgApi(method: string, payload: Record<string, unknown>): Promise<
 }
 
 async function reply(chatId: number | string, text: string): Promise<void> {
-  await tgApi('sendMessage', {
-    chat_id: chatId,
-    text,
-    parse_mode: 'HTML',
-    disable_web_page_preview: false,
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) return;
+  const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(8000),
+    body: JSON.stringify({
+      chat_id: chatId,
+      text,
+      parse_mode: 'HTML',
+      disable_web_page_preview: false,
+    }),
   });
+  if (!response.ok) {
+    const body = await response.text();
+    console.error('[telegram] sendMessage НЕ доставлен:', response.status, body.slice(0, 300));
+  } else {
+    console.log('[telegram] sendMessage отправлен в чат', chatId);
+  }
 }
 
 interface StatsResult {
@@ -167,6 +180,22 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   // --- Регистрация webhook ---
   if (req.method === 'GET') {
     const url = new URL(req.url ?? '/', 'https://local');
+    if (url.searchParams.get('action') === 'info') {
+      if (url.searchParams.get('key') !== process.env.TELEGRAM_WEBHOOK_SECRET) {
+        send(403, { ok: false, error: 'forbidden' });
+        return;
+      }
+      const token = process.env.TELEGRAM_BOT_TOKEN;
+      if (!token) {
+        send(500, { ok: false, error: 'no token' });
+        return;
+      }
+      const r = await fetch(`https://api.telegram.org/bot${token}/getWebhookInfo`, {
+        signal: AbortSignal.timeout(8000),
+      });
+      send(200, await r.json());
+      return;
+    }
     if (url.searchParams.get('action') === 'setup') {
       if (url.searchParams.get('key') !== process.env.TELEGRAM_WEBHOOK_SECRET) {
         send(403, { ok: false, error: 'forbidden' });
