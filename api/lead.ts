@@ -167,11 +167,13 @@ async function sendToGoogleSheets(lead: Lead): Promise<boolean> {
   const url = process.env.GOOGLE_SHEETS_WEBAPP_URL;
   if (!url) return false;
 
+  // Кириллица в JSON-боди Apps Script декодируется с потерями,
+  // поэтому данные идут form-urlencoded с процентным экранированием.
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     signal: AbortSignal.timeout(8000),
-    body: JSON.stringify(lead),
+    body: `data=${encodeURIComponent(JSON.stringify(lead))}`,
   });
   return response.ok;
 }
