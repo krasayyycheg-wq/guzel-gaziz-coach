@@ -1,3 +1,4 @@
+import type { IncomingMessage, ServerResponse } from 'http';
 import { z } from 'zod';
 
 /**
@@ -100,6 +101,7 @@ async function sendTelegram(text: string): Promise<boolean> {
   const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(8000),
     body: JSON.stringify({
       chat_id: chatId,
       text,
@@ -128,7 +130,7 @@ async function sendToYandexForms(text: string): Promise<boolean> {
   const base = `https://forms.yandex.net/api/v1/forms/${formId}`;
   const auth = { Authorization: `OAuth ${token}` };
 
-  const formResponse = await fetch(base, { headers: auth });
+  const formResponse = await fetch(base, { headers: auth, signal: AbortSignal.timeout(8000) });
   if (!formResponse.ok) {
     console.error('[lead] Yandex Forms: не удалось получить структуру формы', formResponse.status);
     return false;
@@ -144,6 +146,7 @@ async function sendToYandexForms(text: string): Promise<boolean> {
   const importResponse = await fetch(`${base}/responses`, {
     method: 'POST',
     headers: { ...auth, 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(8000),
     body: JSON.stringify({ data: { [target.id]: { value: [text] } } }),
   });
   if (!importResponse.ok) {
@@ -153,21 +156,45 @@ async function sendToYandexForms(text: string): Promise<boolean> {
   return true;
 }
 
-export default async function handler(request: Request): Promise<Response> {
-  if (request.method !== 'POST') {
-    return Response.json({ ok: false, error: 'method_not_allowed' }, { status: 405 });
+/**
+ * Классическая Node.js-сигнатура (IncomingMessage/ServerResponse) —
+ * гарантированно поддерживается Vercel Node Runtime и не зависит
+ * от автоопределения Web API.
+ */
+export default async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const send = (status: number, data: unknown): void => {
+    res.statusCode = status;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify(data));
+  };
+
+  if (req.method !== 'POST') {
+    send(405, { ok: false, error: 'method_not_allowed' });
+    return;
+  }
+
+  const chunks: Buffer[] = [];
+  let raw: string;
+  try {
+    for await (const chunk of req) chunks.push(chunk as Buffer);
+    raw = Buffer.concat(chunks).toString('utf8');
+  } catch {
+    send(400, { ok: false, error: 'invalid_json' });
+    return;
   }
 
   let body: unknown;
   try {
-    body = await request.json();
+    body = JSON.parse(raw);
   } catch {
-    return Response.json({ ok: false, error: 'invalid_json' }, { status: 400 });
+    send(400, { ok: false, error: 'invalid_json' });
+    return;
   }
 
   const parsed = leadSchema.safeParse(body);
   if (!parsed.success) {
-    return Response.json({ ok: false, error: 'invalid_payload' }, { status: 422 });
+    send(422, { ok: false, error: 'invalid_payload' });
+    return;
   }
   const lead = parsed.data;
 
@@ -193,5 +220,5 @@ export default async function handler(request: Request): Promise<Response> {
     console.warn('[lead] Получен лид, но каналы доставки не настроены:', plainText);
   }
 
-  return Response.json({ ok: true, delivered });
+  send(200, { ok: true, delivered });
 }
