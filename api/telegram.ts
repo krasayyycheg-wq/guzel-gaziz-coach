@@ -233,6 +233,19 @@ async function fetchLast(count: number, type?: string, status?: string): Promise
   return data.ok ? (data.items ?? []) : null;
 }
 
+/** Поиск лидов: запрос передаём в base64 (кириллица в GET-параметрах ненадёжна). */
+async function fetchFind(query: string): Promise<LeadRow[] | null> {
+  const webapp = process.env.GOOGLE_SHEETS_WEBAPP_URL;
+  if (!webapp) return null;
+  const url = new URL(webapp);
+  url.searchParams.set('action', 'find');
+  url.searchParams.set('q', Buffer.from(query, 'utf8').toString('base64'));
+  const response = await fetch(url.toString(), { signal: AbortSignal.timeout(20000) });
+  if (!response.ok) return null;
+  const data = (await response.json()) as { ok?: boolean; items?: LeadRow[] };
+  return data.ok ? (data.items ?? []) : null;
+}
+
 const TYPE_EMOJI: Record<string, string> = {
   application: '🔥',
   quiz_contact: '⭐',
@@ -334,6 +347,8 @@ const HELP_TEXT = [
   '/stats — статистика лидов за период',
   '/last — последние лиды: 5, 10 или 15',
   '/status — лиды по статусу: отработан, позже, без статуса',
+  '/find запрос — поиск по имени, телефону, email, программе',
+  '/ping — проверка сайта, таблицы и бота',
 ].join('\n');
 
 /** Клавиатура фильтра по статусу. */
@@ -610,6 +625,51 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       await reply(msg.chat.id, '<b>Последние лиды</b>\n\nВыберите количество:', LAST_KEYBOARD);
     } else if (text === '/status') {
       await reply(msg.chat.id, '<b>Лиды по статусу</b>\n\nВыберите фильтр:', STATUS_FILTER_KEYBOARD);
+    } else if (text === '/ping') {
+      const results: string[] = [];
+      // Сайт
+      try {
+        const r = await fetch('https://www.guzelgaziz.ru/', {
+          signal: AbortSignal.timeout(8000),
+        });
+        results.push(r.ok ? '✅ Сайт доступен' : `❌ Сайт: HTTP ${r.status}`);
+      } catch {
+        results.push('❌ Сайт недоступен');
+      }
+      // Таблица
+      try {
+        const stats = await fetchStats(1);
+        results.push(stats?.ok ? '✅ Google Таблица читается' : '❌ Таблица не отвечает');
+      } catch {
+        results.push('❌ Таблица не отвечает');
+      }
+      // Telegram
+      const token = process.env.TELEGRAM_BOT_TOKEN;
+      try {
+        const r = await fetch(`https://api.telegram.org/bot${token}/getMe`, {
+          signal: AbortSignal.timeout(8000),
+        });
+        results.push(r.ok ? '✅ Бот на связи' : '❌ Telegram API: ошибка');
+      } catch {
+        results.push('❌ Telegram API недоступен');
+      }
+      await reply(msg.chat.id, `<b>Проверка систем</b>\n\n${results.join('\n')}`);
+    } else if (text.startsWith('/find')) {
+      const query = text.replace(/^\/find\s*/, '').trim();
+      if (!query) {
+        await reply(
+          msg.chat.id,
+          'Использование: <code>/find запрос</code>\nПоиск по имени, телефону, email и программе (по совпадению части текста).',
+        );
+      } else {
+        const items = await fetchFind(query);
+        await reply(
+          msg.chat.id,
+          items === null
+            ? 'Не удалось выполнить поиск. Проверьте Google Таблицу.'
+            : `<b>Поиск: «${escapeHtml(query)}»</b>\n\n${formatLast(items)}`,
+        );
+      }
     } else if (text.startsWith('/stats')) {
       const period = PERIODS.find((p) => p.match.test(text));
       if (!period) {
