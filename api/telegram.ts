@@ -268,9 +268,8 @@ function formatStats(label: string, counts: Record<string, number>, withLink = f
 const HELP_TEXT = [
   '<b>Команды бота</b>',
   '',
-  '/stats — статистика: кнопки выбора периода',
-  '/stats неделя, месяц, полгода, всё — статистика сразу',
-  '/last — последние лиды: кнопки 3 / 5 / 10',
+  '/stats — статистика лидов за период',
+  '/last — последние лиды: 5, 10 или 15',
 ].join('\n');
 
 /** Однократная регистрация webhook (вызывается через GET ?action=setup&key=...). */
