@@ -13,10 +13,12 @@ import { z } from 'zod';
  *     в форму (POST /forms/{id}/responses), которая связана с Яндекс Таблицей
  *     (в настройках формы: «Ответы» → связать с таблицей). Требуются
  *     YANDEX_FORMS_OAUTH_TOKEN и YANDEX_FORMS_FORM_ID.
+ *  3. Google Таблицы — через веб-приложение Google Apps Script
+ *     (GOOGLE_SHEETS_WEBAPP_URL, URL вида .../exec).
  *
- * Обе доставки опциональны: если переменные не заданы, функция отвечает 200
- * с delivered: { telegram: false, yandex_forms: false }, а лид пишется в лог
- * функции (Vercel → Logs), чтобы ничего не терялось беззвучно.
+ * Все доставки опциональны: если переменные не заданы, функция отвечает 200
+ * с delivered: { ...: false }, а лид пишется в лог функции (Vercel → Logs),
+ * чтобы ничего не терялось беззвучно.
  */
 
 const leadSchema = z.object({
@@ -157,6 +159,24 @@ async function sendToYandexForms(text: string): Promise<boolean> {
 }
 
 /**
+ * Добавляет строку лида в Google Таблицу через опубликованное
+ * веб-приложение Google Apps Script (doPost + appendRow).
+ * Требуется переменная GOOGLE_SHEETS_WEBAPP_URL (URL вида .../exec).
+ */
+async function sendToGoogleSheets(lead: Lead): Promise<boolean> {
+  const url = process.env.GOOGLE_SHEETS_WEBAPP_URL;
+  if (!url) return false;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(8000),
+    body: JSON.stringify(lead),
+  });
+  return response.ok;
+}
+
+/**
  * Классическая Node.js-сигнатура (IncomingMessage/ServerResponse) —
  * гарантированно поддерживается Vercel Node Runtime и не зависит
  * от автоопределения Web API.
@@ -201,7 +221,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   const telegramText = formatTelegramMessage(lead);
   const plainText = formatPlainText(lead);
 
-  const delivered = { telegram: false, yandex_forms: false };
+  const delivered = { telegram: false, yandex_forms: false, google_sheets: false };
 
   try {
     delivered.telegram = await sendTelegram(telegramText);
@@ -215,7 +235,13 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     console.error('[lead] Yandex Forms delivery error:', error);
   }
 
-  if (!delivered.telegram && !delivered.yandex_forms) {
+  try {
+    delivered.google_sheets = await sendToGoogleSheets(lead);
+  } catch (error) {
+    console.error('[lead] Google Sheets delivery error:', error);
+  }
+
+  if (!delivered.telegram && !delivered.yandex_forms && !delivered.google_sheets) {
     // Ни один канал не настроен — лид остаётся в логах функции
     console.warn('[lead] Получен лид, но каналы доставки не настроены:', plainText);
   }
