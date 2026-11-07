@@ -101,7 +101,8 @@ async function fetchStats(days: number | 'all'): Promise<StatsResult | null> {
   if (!webapp) return null;
   const url = new URL(webapp);
   url.searchParams.set('period', days === 'all' ? 'all' : String(days));
-  const response = await fetch(url.toString(), { signal: AbortSignal.timeout(8000) });
+  // Apps Script при холодном старте отвечает долго — 20 с, лимит функции 30 с
+  const response = await fetch(url.toString(), { signal: AbortSignal.timeout(20000) });
   if (!response.ok) return null;
   return (await response.json()) as StatsResult;
 }
