@@ -101,6 +101,17 @@ const STATS_KEYBOARD = {
   ],
 };
 
+/** Клавиатура выбора количества последних лидов. */
+const LAST_KEYBOARD = {
+  inline_keyboard: [
+    [
+      { text: 'Последние 3', callback_data: 'last:3' },
+      { text: 'Последние 5', callback_data: 'last:5' },
+      { text: 'Последние 10', callback_data: 'last:10' },
+    ],
+  ],
+};
+
 const PERIOD_LABELS: Record<string, string> = {
   '14': 'за 2 недели',
   '30': 'за месяц',
@@ -155,6 +166,83 @@ interface StatsResult {
   counts?: Record<string, number>;
 }
 
+interface LeadRow {
+  date?: string;
+  type?: string;
+  name?: string;
+  phone?: string;
+  email?: string;
+  program?: string;
+  score?: number | string | null;
+  profile?: string;
+  message?: string;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;');
+}
+
+async function fetchLast(count: number): Promise<LeadRow[] | null> {
+  const webapp = process.env.GOOGLE_SHEETS_WEBAPP_URL;
+  if (!webapp) return null;
+  const url = new URL(webapp);
+  url.searchParams.set('action', 'last');
+  url.searchParams.set('count', String(count));
+  const response = await fetch(url.toString(), { signal: AbortSignal.timeout(20000) });
+  if (!response.ok) return null;
+  const data = (await response.json()) as { ok?: boolean; items?: LeadRow[] };
+  return data.ok ? (data.items ?? []) : null;
+}
+
+const TYPE_EMOJI: Record<string, string> = {
+  application: '🔥',
+  quiz_contact: '⭐',
+  quiz_result: '📊',
+};
+
+function formatLeadDate(iso: string | undefined): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return new Intl.DateTimeFormat('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Europe/Moscow',
+  }).format(d);
+}
+
+function formatLast(items: LeadRow[]): string {
+  if (items.length === 0) return 'Лидов пока нет.';
+  const lines: string[] = [];
+  for (const item of items) {
+    const emoji = TYPE_EMOJI[item.type ?? ''] ?? '•';
+    const date = formatLeadDate(item.date);
+    const parts: string[] = [];
+    if (item.name) parts.push(escapeHtml(item.name));
+    if (item.phone) parts.push(escapeHtml(item.phone));
+    if (item.email) parts.push(escapeHtml(item.email));
+    if (item.program) parts.push(escapeHtml(item.program));
+    if (item.score !== undefined && item.score !== null && item.score !== '') {
+      parts.push(`индекс ${item.score}%`);
+    }
+    if (item.profile) parts.push(escapeHtml(item.profile));
+    lines.push(`${emoji} <b>${escapeHtml(date)}</b>`);
+    if (parts.length > 0) lines.push(parts.join(' · '));
+    if (item.message) {
+      const text = item.message.length > 100 ? `${item.message.slice(0, 100)}…` : item.message;
+      lines.push(escapeHtml(text));
+    }
+    lines.push('');
+  }
+  const text = lines.join('\n').trimEnd();
+  return text.length > 3900 ? `${text.slice(0, 3900)}…` : text;
+}
+
 async function fetchStats(days: number | 'all'): Promise<StatsResult | null> {
   const webapp = process.env.GOOGLE_SHEETS_WEBAPP_URL;
   if (!webapp) return null;
@@ -178,13 +266,11 @@ function formatStats(label: string, counts: Record<string, number>, withLink = f
 }
 
 const HELP_TEXT = [
-  '<b>Команды статистики лидов</b>',
+  '<b>Команды бота</b>',
   '',
-  '/stats — за месяц (по умолчанию)',
-  '/stats неделя — за 2 недели',
-  '/stats месяц — за месяц',
-  '/stats полгода — за полгода',
-  '/stats всё — за всё время',
+  '/stats — статистика: кнопки выбора периода',
+  '/stats неделя|месяц|полгода|всё — статистика сразу',
+  '/last — последние лиды: кнопки 3 / 5 / 10',
 ].join('\n');
 
 /** Однократная регистрация webhook (вызывается через GET ?action=setup&key=...). */
@@ -317,6 +403,17 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
           const key = m[1];
           await sendStats(cbChatId, key === 'all' ? 'all' : Number(key), PERIOD_LABELS[key] ?? '');
         }
+        const last = /^last:(\d+)$/.exec(cb.data);
+        if (last) {
+          const count = Number(last[1]);
+          const items = await fetchLast(count);
+          await reply(
+            cbChatId,
+            items === null
+              ? 'Не удалось получить список лидов. Проверьте Google Таблицу.'
+              : formatLast(items),
+          );
+        }
       }
       send(200, { ok: true });
       return;
@@ -345,6 +442,8 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     const text = msg.text.trim();
     if (text === '/start') {
       await reply(msg.chat.id, HELP_TEXT, STATS_KEYBOARD);
+    } else if (text === '/last') {
+      await reply(msg.chat.id, '<b>Последние лиды</b>\n\nВыберите количество:', LAST_KEYBOARD);
     } else if (text.startsWith('/stats')) {
       const period = PERIODS.find((p) => p.match.test(text));
       if (!period) {
