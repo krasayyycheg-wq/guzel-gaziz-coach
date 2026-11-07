@@ -102,7 +102,7 @@ const STATS_KEYBOARD = {
 };
 
 /** Кнопки «Показать» под статистикой: выгрузка списка по типу. */
-const SHOW_KEYBOARD = {
+export const SHOW_KEYBOARD = {
   inline_keyboard: [
     [{ text: 'Показать заявки', callback_data: 'list:application' }],
     [{ text: 'Показать лидов с теста', callback_data: 'list:quiz_contact' }],
@@ -138,7 +138,7 @@ const PERIOD_LABELS: Record<string, string> = {
   all: 'за всё время',
 };
 
-async function reply(
+export async function reply(
   chatId: number | string,
   text: string,
   replyMarkup?: unknown,
@@ -199,7 +199,7 @@ interface StatsResult {
   counts?: Record<string, number>;
 }
 
-interface LeadRow {
+export interface LeadRow {
   date?: string;
   type?: string;
   name?: string;
@@ -252,7 +252,7 @@ function formatLeadDate(iso: string | undefined): string {
   }).format(d);
 }
 
-function formatLast(items: LeadRow[]): string {
+export function formatLast(items: LeadRow[]): string {
   if (items.length === 0) return 'Лидов пока нет.';
   const lines: string[] = [];
   for (const item of items) {
@@ -306,7 +306,7 @@ function formatTypedList(items: LeadRow[], typeLabel: string): string {
   return text.length > 3900 ? `${text.slice(0, 3900)}…` : text;
 }
 
-async function fetchStats(days: number | 'all'): Promise<StatsResult | null> {
+export async function fetchStats(days: number | 'all'): Promise<StatsResult | null> {
   const webapp = process.env.GOOGLE_SHEETS_WEBAPP_URL;
   if (!webapp) return null;
   const url = new URL(webapp);
@@ -317,7 +317,7 @@ async function fetchStats(days: number | 'all'): Promise<StatsResult | null> {
   return (await response.json()) as StatsResult;
 }
 
-function formatStats(label: string, counts: Record<string, number>, withLink = false): string {
+export function formatStats(label: string, counts: Record<string, number>, withLink = false): string {
   const lines: string[] = [`<b>Статистика ${label}</b>`, ''];
   lines.push(`${TYPE_LABELS.application}: <b>${counts.application ?? 0}</b>`);
   lines.push(`${TYPE_LABELS.quiz_contact}: <b>${counts.quiz_contact ?? 0}</b>`);
