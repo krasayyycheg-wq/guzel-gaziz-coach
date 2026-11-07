@@ -105,9 +105,9 @@ const STATS_KEYBOARD = {
 const LAST_KEYBOARD = {
   inline_keyboard: [
     [
-      { text: 'Последние 3', callback_data: 'last:3' },
-      { text: 'Последние 5', callback_data: 'last:5' },
-      { text: 'Последние 10', callback_data: 'last:10' },
+      { text: '5', callback_data: 'last:5' },
+      { text: '10', callback_data: 'last:10' },
+      { text: '15', callback_data: 'last:15' },
     ],
   ],
 };
@@ -269,7 +269,7 @@ const HELP_TEXT = [
   '<b>Команды бота</b>',
   '',
   '/stats — статистика: кнопки выбора периода',
-  '/stats неделя|месяц|полгода|всё — статистика сразу',
+  '/stats неделя, месяц, полгода, всё — статистика сразу',
   '/last — последние лиды: кнопки 3 / 5 / 10',
 ].join('\n');
 
