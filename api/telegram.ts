@@ -50,7 +50,7 @@ interface TgUpdate {
   callback_query?: {
     id?: string;
     from?: { id?: number | string };
-    message?: { chat?: { id?: number | string; type?: string } };
+    message?: { chat?: { id?: number | string; type?: string }; message_id?: number };
     data?: string;
   };
 }
@@ -104,9 +104,9 @@ const STATS_KEYBOARD = {
 /** Кнопки «Показать» под статистикой: выгрузка списка по типу. */
 const SHOW_KEYBOARD = {
   inline_keyboard: [
-    [{ text: '🔥 Показать заявки', callback_data: 'list:application' }],
-    [{ text: '⭐ Показать лидов с теста', callback_data: 'list:quiz_contact' }],
-    [{ text: '📊 Показать результаты теста', callback_data: 'list:quiz_result' }],
+    [{ text: 'Показать заявки', callback_data: 'list:application' }],
+    [{ text: 'Показать лидов с теста', callback_data: 'list:quiz_contact' }],
+    [{ text: 'Показать результаты теста', callback_data: 'list:quiz_result' }],
   ],
 };
 
@@ -177,6 +177,20 @@ async function sendStats(
     return;
   }
   await reply(chatId, formatStats(label, stats.counts, days === 'all'), SHOW_KEYBOARD);
+}
+
+/** Записывает статус лида в таблицу (колонка «Статус»). */
+async function setLeadStatus(row: number, status: string): Promise<boolean> {
+  const webapp = process.env.GOOGLE_SHEETS_WEBAPP_URL;
+  if (!webapp) return false;
+  const url = new URL(webapp);
+  url.searchParams.set('action', 'status');
+  url.searchParams.set('row', String(row));
+  url.searchParams.set('status', status);
+  const response = await fetch(url.toString(), { signal: AbortSignal.timeout(15000) });
+  if (!response.ok) return false;
+  const data = (await response.json()) as { ok?: boolean };
+  return data.ok === true;
 }
 
 interface StatsResult {
@@ -474,6 +488,27 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
             items === null
               ? 'Не удалось получить список лидов. Проверьте Google Таблицу.'
               : formatTypedList(items, TYPE_LABELS[type] ?? type),
+          );
+        }
+        // --- Статусы лида: ✅ Связался / ⏳ Позже ---
+        const statusMatch = /^(done|later):(\d+)$/.exec(cb.data);
+        if (statusMatch) {
+          const row = Number(statusMatch[2]);
+          const statusText = statusMatch[1] === 'done' ? '✅ Связался' : '⏳ Позже';
+          const saved = await setLeadStatus(row, statusMatch[1] === 'done' ? 'contacted' : 'later');
+          // Убираем кнопки под исходным уведомлением
+          if (cb.message?.message_id) {
+            await tgApi('editMessageReplyMarkup', {
+              chat_id: cbChatId,
+              message_id: cb.message.message_id,
+              reply_markup: { inline_keyboard: [] },
+            });
+          }
+          await reply(
+            cbChatId,
+            saved
+              ? `${statusText} — статус записан в таблицу (строка ${row}).`
+              : 'Не удалось записать статус в таблицу. Попробуйте ещё раз.',
           );
         }
       }

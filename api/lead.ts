@@ -95,7 +95,7 @@ function formatPlainText(lead: Lead): string {
     .replaceAll(/&quot;/g, '"');
 }
 
-async function sendTelegram(text: string): Promise<boolean> {
+async function sendTelegram(text: string, sheetRow?: number): Promise<boolean> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   const chatId = process.env.TELEGRAM_CHAT_ID;
   if (!token || !chatId) return false;
@@ -109,6 +109,18 @@ async function sendTelegram(text: string): Promise<boolean> {
       text,
       parse_mode: 'HTML',
       disable_web_page_preview: true,
+      ...(sheetRow
+        ? {
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  { text: '✅ Связался', callback_data: `done:${sheetRow}` },
+                  { text: '⏳ Позже', callback_data: `later:${sheetRow}` },
+                ],
+              ],
+            },
+          }
+        : {}),
     }),
   });
   return response.ok;
@@ -163,9 +175,9 @@ async function sendToYandexForms(text: string): Promise<boolean> {
  * веб-приложение Google Apps Script (doPost + appendRow).
  * Требуется переменная GOOGLE_SHEETS_WEBAPP_URL (URL вида .../exec).
  */
-async function sendToGoogleSheets(lead: Lead): Promise<boolean> {
+async function sendToGoogleSheets(lead: Lead): Promise<{ ok: boolean; row?: number }> {
   const url = process.env.GOOGLE_SHEETS_WEBAPP_URL;
-  if (!url) return false;
+  if (!url) return { ok: false };
 
   // Кириллица портится на уровне платформы Apps Script при любом
   // текстовом формате, поэтому данные идут в base64 (чистый ASCII),
@@ -177,7 +189,9 @@ async function sendToGoogleSheets(lead: Lead): Promise<boolean> {
     signal: AbortSignal.timeout(8000),
     body: `data=${payload}`,
   });
-  return response.ok;
+  if (!response.ok) return { ok: false };
+  const data = (await response.json()) as { ok?: boolean; row?: number };
+  return { ok: data.ok === true, row: typeof data.row === 'number' ? data.row : undefined };
 }
 
 /**
@@ -227,8 +241,19 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
   const delivered = { telegram: false, yandex_forms: false, google_sheets: false };
 
+  // Сначала таблица — она возвращает номер строки для кнопок статуса,
+  // затем Telegram с кнопками «Связался / Позже».
+  let sheetRow: number | undefined;
   try {
-    delivered.telegram = await sendTelegram(telegramText);
+    const sheets = await sendToGoogleSheets(lead);
+    delivered.google_sheets = sheets.ok;
+    sheetRow = sheets.row;
+  } catch (error) {
+    console.error('[lead] Google Sheets delivery error:', error);
+  }
+
+  try {
+    delivered.telegram = await sendTelegram(telegramText, sheetRow);
   } catch (error) {
     console.error('[lead] Telegram delivery error:', error);
   }
@@ -237,12 +262,6 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     delivered.yandex_forms = await sendToYandexForms(plainText);
   } catch (error) {
     console.error('[lead] Yandex Forms delivery error:', error);
-  }
-
-  try {
-    delivered.google_sheets = await sendToGoogleSheets(lead);
-  } catch (error) {
-    console.error('[lead] Google Sheets delivery error:', error);
   }
 
   if (!delivered.telegram && !delivered.yandex_forms && !delivered.google_sheets) {
