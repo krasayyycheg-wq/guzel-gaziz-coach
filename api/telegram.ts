@@ -244,46 +244,55 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     return;
   }
 
-  // Telegram ждёт быстрый 200 — отвечаем сразу, обработку делаем до return
-  send(200, { ok: true });
-
+  // ВАЖНО: обработка идёт ДО ответа 200 — Vercel обрывает выполнение
+  // функции сразу после отправки ответа, поэтому send() только в конце.
   const msg = update.message;
-  if (!msg?.chat?.id || typeof msg.text !== 'string') return;
+  if (!msg?.chat?.id || typeof msg.text !== 'string') {
+    send(200, { ok: true });
+    return;
+  }
 
   // Отвечаем в группе TELEGRAM_CHAT_ID, а в личке — только участникам этой группы
   const chatId = process.env.TELEGRAM_CHAT_ID;
-  if (!chatId) return;
+  if (!chatId) {
+    send(200, { ok: true });
+    return;
+  }
   if (String(msg.chat.id) !== String(chatId)) {
     const fromId = msg.from?.id;
-    if (msg.chat.type === 'private' && fromId && (await isGroupMember(chatId, fromId))) {
-      // личка владельца/участника группы — разрешено
-    } else {
+    const allowed =
+      msg.chat.type === 'private' && fromId ? await isGroupMember(chatId, fromId) : false;
+    if (!allowed) {
       console.log('[telegram] игнор чат', msg.chat.id, 'тип', msg.chat.type);
+      send(200, { ok: true });
       return;
     }
   }
   console.log('[telegram] команда:', msg.text, 'из чата', msg.chat.id);
 
   const text = msg.text.trim();
-  if (text === '/start') {
-    await reply(msg.chat.id, HELP_TEXT);
-    return;
-  }
-  if (!text.startsWith('/stats')) return;
-
-  const period = PERIODS.find((p) => p.match.test(text));
-  const days = period?.days ?? 30;
-  const label = period?.label ?? 'за месяц';
-
   try {
-    const stats = await fetchStats(days);
-    if (!stats?.ok || !stats.counts) {
-      await reply(msg.chat.id, 'Не удалось получить статистику. Проверьте Google Таблицу.');
-      return;
+    if (text === '/start') {
+      await reply(msg.chat.id, HELP_TEXT);
+    } else if (text.startsWith('/stats')) {
+      const period = PERIODS.find((p) => p.match.test(text));
+      const days = period?.days ?? 30;
+      const label = period?.label ?? 'за месяц';
+      const stats = await fetchStats(days);
+      if (!stats?.ok || !stats.counts) {
+        await reply(msg.chat.id, 'Не удалось получить статистику. Проверьте Google Таблицу.');
+      } else {
+        await reply(msg.chat.id, formatStats(label, stats.counts));
+      }
     }
-    await reply(msg.chat.id, formatStats(label, stats.counts));
   } catch (error) {
     console.error('[telegram] stats error:', error);
-    await reply(msg.chat.id, 'Ошибка при получении статистики.');
+    try {
+      await reply(msg.chat.id, 'Ошибка при получении статистики.');
+    } catch {
+      // бот недоступен — лог выше
+    }
   }
+
+  send(200, { ok: true });
 }
