@@ -47,6 +47,12 @@ interface TgUpdate {
     from?: { id?: number | string };
     text?: string;
   };
+  callback_query?: {
+    id?: string;
+    from?: { id?: number | string };
+    message?: { chat?: { id?: number | string; type?: string } };
+    data?: string;
+  };
 }
 
 /** Проверяет, что пользователь состоит в целевой группе/чате. */
@@ -81,7 +87,32 @@ async function tgApi(method: string, payload: Record<string, unknown>): Promise<
   return response.ok;
 }
 
-async function reply(chatId: number | string, text: string): Promise<void> {
+/** Клавиатура выбора периода статистики. */
+const STATS_KEYBOARD = {
+  inline_keyboard: [
+    [
+      { text: '2 недели', callback_data: 'stats:14' },
+      { text: 'Месяц', callback_data: 'stats:30' },
+    ],
+    [
+      { text: 'Полгода', callback_data: 'stats:182' },
+      { text: 'Всё время', callback_data: 'stats:all' },
+    ],
+  ],
+};
+
+const PERIOD_LABELS: Record<string, string> = {
+  '14': 'за 2 недели',
+  '30': 'за месяц',
+  '182': 'за полгода',
+  all: 'за всё время',
+};
+
+async function reply(
+  chatId: number | string,
+  text: string,
+  replyMarkup?: unknown,
+): Promise<void> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
   if (!token) return;
   const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
@@ -93,6 +124,7 @@ async function reply(chatId: number | string, text: string): Promise<void> {
       text,
       parse_mode: 'HTML',
       disable_web_page_preview: false,
+      ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
     }),
   });
   if (!response.ok) {
@@ -101,6 +133,20 @@ async function reply(chatId: number | string, text: string): Promise<void> {
   } else {
     console.log('[telegram] sendMessage отправлен в чат', chatId);
   }
+}
+
+/** Запрашивает статистику и отправляет её в чат. */
+async function sendStats(
+  chatId: number | string,
+  days: number | 'all',
+  label: string,
+): Promise<void> {
+  const stats = await fetchStats(days);
+  if (!stats?.ok || !stats.counts) {
+    await reply(chatId, 'Не удалось получить статистику. Проверьте Google Таблицу.');
+    return;
+  }
+  await reply(chatId, formatStats(label, stats.counts));
 }
 
 interface StatsResult {
@@ -156,7 +202,7 @@ async function setupWebhook(baseUrl: string): Promise<string> {
     body: JSON.stringify({
       url: webhookUrl,
       secret_token: secret,
-      allowed_updates: ['message'],
+      allowed_updates: ['message', 'callback_query'],
     }),
   });
   const data = (await result.json()) as { ok: boolean; description?: string };
@@ -246,49 +292,76 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
   // ВАЖНО: обработка идёт ДО ответа 200 — Vercel обрывает выполнение
   // функции сразу после отправки ответа, поэтому send() только в конце.
-  const msg = update.message;
-  if (!msg?.chat?.id || typeof msg.text !== 'string') {
-    send(200, { ok: true });
-    return;
-  }
-
-  // Отвечаем в группе TELEGRAM_CHAT_ID, а в личке — только участникам этой группы
   const chatId = process.env.TELEGRAM_CHAT_ID;
   if (!chatId) {
     send(200, { ok: true });
     return;
   }
-  if (String(msg.chat.id) !== String(chatId)) {
-    const fromId = msg.from?.id;
-    const allowed =
-      msg.chat.type === 'private' && fromId ? await isGroupMember(chatId, fromId) : false;
-    if (!allowed) {
-      console.log('[telegram] игнор чат', msg.chat.id, 'тип', msg.chat.type);
+
+  try {
+    // --- Нажатие inline-кнопки ---
+    const cb = update.callback_query;
+    if (cb?.id) {
+      await tgApi('answerCallbackQuery', { callback_query_id: cb.id });
+      const cbChatId = cb.message?.chat?.id;
+      const cbFromId = cb.from?.id;
+      const allowed =
+        cbChatId !== undefined && String(cbChatId) === String(chatId)
+          ? true
+          : cbFromId !== undefined
+            ? await isGroupMember(chatId, cbFromId)
+            : false;
+      if (allowed && cbChatId !== undefined && typeof cb.data === 'string') {
+        const m = /^stats:(\d+|all)$/.exec(cb.data);
+        if (m) {
+          const key = m[1];
+          await sendStats(cbChatId, key === 'all' ? 'all' : Number(key), PERIOD_LABELS[key] ?? '');
+        }
+      }
       send(200, { ok: true });
       return;
     }
-  }
-  console.log('[telegram] команда:', msg.text, 'из чата', msg.chat.id);
 
-  const text = msg.text.trim();
-  try {
+    // --- Обычное сообщение ---
+    const msg = update.message;
+    if (!msg?.chat?.id || typeof msg.text !== 'string') {
+      send(200, { ok: true });
+      return;
+    }
+
+    // Отвечаем в группе TELEGRAM_CHAT_ID, а в личке — только участникам этой группы
+    if (String(msg.chat.id) !== String(chatId)) {
+      const fromId = msg.from?.id;
+      const allowed =
+        msg.chat.type === 'private' && fromId ? await isGroupMember(chatId, fromId) : false;
+      if (!allowed) {
+        console.log('[telegram] игнор чат', msg.chat.id, 'тип', msg.chat.type);
+        send(200, { ok: true });
+        return;
+      }
+    }
+    console.log('[telegram] команда:', msg.text, 'из чата', msg.chat.id);
+
+    const text = msg.text.trim();
     if (text === '/start') {
-      await reply(msg.chat.id, HELP_TEXT);
+      await reply(msg.chat.id, HELP_TEXT, STATS_KEYBOARD);
     } else if (text.startsWith('/stats')) {
       const period = PERIODS.find((p) => p.match.test(text));
-      const days = period?.days ?? 30;
-      const label = period?.label ?? 'за месяц';
-      const stats = await fetchStats(days);
-      if (!stats?.ok || !stats.counts) {
-        await reply(msg.chat.id, 'Не удалось получить статистику. Проверьте Google Таблицу.');
+      if (!period) {
+        // без аргумента — показываем кнопки
+        await reply(
+          msg.chat.id,
+          '<b>Статистика лидов</b>\n\nВыберите период:',
+          STATS_KEYBOARD,
+        );
       } else {
-        await reply(msg.chat.id, formatStats(label, stats.counts));
+        await sendStats(msg.chat.id, period.days, period.label);
       }
     }
   } catch (error) {
     console.error('[telegram] stats error:', error);
     try {
-      await reply(msg.chat.id, 'Ошибка при получении статистики.');
+      await reply(chatId, 'Ошибка при получении статистики.');
     } catch {
       // бот недоступен — лог выше
     }
