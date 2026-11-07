@@ -21,23 +21,21 @@ const answerLabels = [
 ];
 
 const answerGradients = [
-  // 1 — negative (red)
+  // 1–2 — negative (red gradient, shared)
   { bg: 'linear-gradient(135deg, rgba(239,68,68,0.25), rgba(153,27,27,0.15))', border: 'rgba(239,68,68,0.5)', text: '#fca5a5' },
-  // 2 — orange-red
-  { bg: 'linear-gradient(135deg, rgba(249,115,22,0.2), rgba(239,68,68,0.15))', border: 'rgba(249,115,22,0.45)', text: '#fdba74' },
+  { bg: 'linear-gradient(135deg, rgba(239,68,68,0.25), rgba(153,27,27,0.15))', border: 'rgba(239,68,68,0.5)', text: '#fca5a5' },
   // 3 — neutral (slate)
   { bg: 'linear-gradient(135deg, rgba(148,163,184,0.2), rgba(71,85,105,0.15))', border: 'rgba(148,163,184,0.4)', text: '#cbd5e1' },
-  // 4 — green
-  { bg: 'linear-gradient(135deg, rgba(74,222,128,0.2), rgba(34,197,94,0.15))', border: 'rgba(74,222,128,0.45)', text: '#86efac' },
-  // 5 — positive (green bright)
+  // 4–5 — positive (green gradient, shared)
+  { bg: 'linear-gradient(135deg, rgba(34,197,94,0.25), rgba(21,128,61,0.15))', border: 'rgba(34,197,94,0.5)', text: '#86efac' },
   { bg: 'linear-gradient(135deg, rgba(34,197,94,0.25), rgba(21,128,61,0.15))', border: 'rgba(34,197,94,0.5)', text: '#86efac' },
 ];
 
 const selectedGradients = [
   { bg: 'linear-gradient(135deg, rgba(239,68,68,0.55), rgba(153,27,27,0.45))', border: 'rgba(239,68,68,0.9)', text: '#ffffff' },
-  { bg: 'linear-gradient(135deg, rgba(249,115,22,0.5), rgba(239,68,68,0.4))', border: 'rgba(249,115,22,0.9)', text: '#ffffff' },
+  { bg: 'linear-gradient(135deg, rgba(239,68,68,0.55), rgba(153,27,27,0.45))', border: 'rgba(239,68,68,0.9)', text: '#ffffff' },
   { bg: 'linear-gradient(135deg, rgba(148,163,184,0.5), rgba(71,85,105,0.4))', border: 'rgba(148,163,184,0.9)', text: '#ffffff' },
-  { bg: 'linear-gradient(135deg, rgba(74,222,128,0.5), rgba(34,197,94,0.4))', border: 'rgba(74,222,128,0.9)', text: '#ffffff' },
+  { bg: 'linear-gradient(135deg, rgba(34,197,94,0.55), rgba(21,128,61,0.45))', border: 'rgba(34,197,94,0.9)', text: '#ffffff' },
   { bg: 'linear-gradient(135deg, rgba(34,197,94,0.55), rgba(21,128,61,0.45))', border: 'rgba(34,197,94,0.9)', text: '#ffffff' },
 ];
 
