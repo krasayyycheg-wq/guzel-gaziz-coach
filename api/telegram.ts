@@ -43,9 +43,30 @@ const PERIODS: Period[] = [
 
 interface TgUpdate {
   message?: {
-    chat?: { id?: number | string };
+    chat?: { id?: number | string; type?: string };
+    from?: { id?: number | string };
     text?: string;
   };
+}
+
+/** Проверяет, что пользователь состоит в целевой группе/чате. */
+async function isGroupMember(chatId: string | number, userId: number | string): Promise<boolean> {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) return false;
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${token}/getChatMember`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(8000),
+      body: JSON.stringify({ chat_id: chatId, user_id: userId }),
+    });
+    if (!response.ok) return false;
+    const data = (await response.json()) as { ok: boolean; result?: { status?: string } };
+    const status = data.result?.status;
+    return data.ok && (status === 'creator' || status === 'administrator' || status === 'member');
+  } catch {
+    return false;
+  }
 }
 
 async function tgApi(method: string, payload: Record<string, unknown>): Promise<boolean> {
@@ -199,9 +220,19 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   const msg = update.message;
   if (!msg?.chat?.id || typeof msg.text !== 'string') return;
 
-  // Отвечаем только владельцу чата
+  // Отвечаем в группе TELEGRAM_CHAT_ID, а в личке — только участникам этой группы
   const chatId = process.env.TELEGRAM_CHAT_ID;
-  if (!chatId || String(msg.chat.id) !== String(chatId)) return;
+  if (!chatId) return;
+  if (String(msg.chat.id) !== String(chatId)) {
+    const fromId = msg.from?.id;
+    if (msg.chat.type === 'private' && fromId && (await isGroupMember(chatId, fromId))) {
+      // личка владельца/участника группы — разрешено
+    } else {
+      console.log('[telegram] игнор чат', msg.chat.id, 'тип', msg.chat.type);
+      return;
+    }
+  }
+  console.log('[telegram] команда:', msg.text, 'из чата', msg.chat.id);
 
   const text = msg.text.trim();
   if (text === '/start') {
