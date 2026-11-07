@@ -44,9 +44,9 @@ const PROGRAM_LABELS: Record<string, string> = {
 };
 
 const TYPE_LABELS: Record<Lead['type'], string> = {
-  application: 'Заявка на программу',
-  quiz_contact: 'Тест пройден + контакт',
-  quiz_result: 'Тест пройден (без контакта)',
+  application: '🔥 <b>ЗАЯВКА НА ПРОГРАММУ</b>',
+  quiz_contact: '⭐ <b>ЛИД С ТЕСТА</b> (есть контакт)',
+  quiz_result: '📊 Результат теста (без контакта)',
 };
 
 function escapeHtml(value: string): string {
@@ -59,7 +59,7 @@ function escapeHtml(value: string): string {
 
 function formatTelegramMessage(lead: Lead): string {
   const lines: string[] = [];
-  lines.push(`<b>${TYPE_LABELS[lead.type]}</b>`);
+  lines.push(TYPE_LABELS[lead.type]);
 
   if (lead.name) lines.push(`Имя: ${escapeHtml(lead.name)}`);
   if (lead.email) lines.push(`Email: ${escapeHtml(lead.email)}`);
