@@ -146,7 +146,7 @@ async function sendStats(
     await reply(chatId, 'Не удалось получить статистику. Проверьте Google Таблицу.');
     return;
   }
-  await reply(chatId, formatStats(label, stats.counts));
+  await reply(chatId, formatStats(label, stats.counts, days === 'all'));
 }
 
 interface StatsResult {
@@ -166,14 +166,14 @@ async function fetchStats(days: number | 'all'): Promise<StatsResult | null> {
   return (await response.json()) as StatsResult;
 }
 
-function formatStats(label: string, counts: Record<string, number>): string {
+function formatStats(label: string, counts: Record<string, number>, withLink = false): string {
   const lines: string[] = [`<b>Статистика ${label}</b>`, ''];
   lines.push(`${TYPE_LABELS.application}: <b>${counts.application ?? 0}</b>`);
   lines.push(`${TYPE_LABELS.quiz_contact}: <b>${counts.quiz_contact ?? 0}</b>`);
   lines.push(`${TYPE_LABELS.quiz_result}: ${counts.quiz_result ?? 0}`);
   lines.push('');
   lines.push(`Всего обращений: <b>${counts.total ?? 0}</b>`);
-  lines.push(`<a href="${SHEET_LINK}">Открыть Google Таблицу</a>`);
+  if (withLink) lines.push(`<a href="${SHEET_LINK}">Открыть Google Таблицу</a>`);
   return lines.join('\n');
 }
 
