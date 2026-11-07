@@ -45,8 +45,8 @@ const PROGRAM_LABELS: Record<string, string> = {
 
 const TYPE_LABELS: Record<Lead['type'], string> = {
   application: '🔥 <b>ЗАЯВКА НА ПРОГРАММУ</b>',
-  quiz_contact: '⭐ <b>ЛИД С ТЕСТА</b> (есть контакт)',
-  quiz_result: '📊 Результат теста (без контакта)',
+  quiz_contact: '⭐ <b>ЛИД С ТЕСТА</b>',
+  quiz_result: '📊 Результат теста',
 };
 
 function escapeHtml(value: string): string {

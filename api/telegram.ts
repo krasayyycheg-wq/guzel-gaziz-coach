@@ -24,8 +24,8 @@ const SHEET_LINK =
 
 const TYPE_LABELS: Record<string, string> = {
   application: '🔥 Заявки на программу',
-  quiz_contact: '⭐ Лиды с теста (есть контакт)',
-  quiz_result: '📊 Результаты теста (без контакта)',
+  quiz_contact: '⭐ Лиды с теста',
+  quiz_result: '📊 Результаты теста',
 };
 
 interface Period {
@@ -101,6 +101,27 @@ const STATS_KEYBOARD = {
   ],
 };
 
+/** Кнопки «Показать» под статистикой: выгрузка списка по типу. */
+const SHOW_KEYBOARD = {
+  inline_keyboard: [
+    [
+      { text: '🔥 Показать', callback_data: 'list:application' },
+      { text: '⭐ Показать', callback_data: 'list:quiz_contact' },
+      { text: '📊 Показать', callback_data: 'list:quiz_result' },
+    ],
+  ],
+};
+
+/** Стартовые кнопки выбора раздела. */
+const START_KEYBOARD = {
+  inline_keyboard: [
+    [
+      { text: 'Статистика', callback_data: 'menu:stats' },
+      { text: 'Последние лиды', callback_data: 'menu:last' },
+    ],
+  ],
+};
+
 /** Клавиатура выбора количества последних лидов. */
 const LAST_KEYBOARD = {
   inline_keyboard: [
@@ -157,7 +178,7 @@ async function sendStats(
     await reply(chatId, 'Не удалось получить статистику. Проверьте Google Таблицу.');
     return;
   }
-  await reply(chatId, formatStats(label, stats.counts, days === 'all'));
+  await reply(chatId, formatStats(label, stats.counts, days === 'all'), SHOW_KEYBOARD);
 }
 
 interface StatsResult {
@@ -185,12 +206,13 @@ function escapeHtml(value: string): string {
     .replaceAll('>', '&gt;');
 }
 
-async function fetchLast(count: number): Promise<LeadRow[] | null> {
+async function fetchLast(count: number, type?: string): Promise<LeadRow[] | null> {
   const webapp = process.env.GOOGLE_SHEETS_WEBAPP_URL;
   if (!webapp) return null;
   const url = new URL(webapp);
   url.searchParams.set('action', 'last');
   url.searchParams.set('count', String(count));
+  if (type) url.searchParams.set('type', type);
   const response = await fetch(url.toString(), { signal: AbortSignal.timeout(20000) });
   if (!response.ok) return null;
   const data = (await response.json()) as { ok?: boolean; items?: LeadRow[] };
@@ -240,6 +262,32 @@ function formatLast(items: LeadRow[]): string {
     lines.push('');
   }
   const text = lines.join('\n').trimEnd();
+  return text.length > 3900 ? `${text.slice(0, 3900)}…` : text;
+}
+
+/** Выгрузка по типу: каждое поле с подписью (Дата, Имя, Телефон, ...). */
+function formatTypedList(items: LeadRow[], typeLabel: string): string {
+  if (items.length === 0) return `${typeLabel}: записей нет.`;
+  const blocks: string[] = [];
+  for (const item of items) {
+    const emoji = TYPE_EMOJI[item.type ?? ''] ?? '•';
+    const lines: string[] = [`${emoji} <b>${typeLabel}</b>`];
+    lines.push(`Дата: ${escapeHtml(formatLeadDate(item.date))}`);
+    if (item.name) lines.push(`Имя: ${escapeHtml(item.name)}`);
+    if (item.phone) lines.push(`Телефон: ${escapeHtml(item.phone)}`);
+    if (item.email) lines.push(`Email: ${escapeHtml(item.email)}`);
+    if (item.program) lines.push(`Программа: ${escapeHtml(item.program)}`);
+    if (item.score !== undefined && item.score !== null && item.score !== '') {
+      lines.push(`Индекс теста: ${item.score}%`);
+    }
+    if (item.profile) lines.push(`Профиль: ${escapeHtml(item.profile)}`);
+    if (item.message) {
+      const text = item.message.length > 200 ? `${item.message.slice(0, 200)}…` : item.message;
+      lines.push(`Сообщение: ${escapeHtml(text)}`);
+    }
+    blocks.push(lines.join('\n'));
+  }
+  const text = blocks.join('\n\n');
   return text.length > 3900 ? `${text.slice(0, 3900)}…` : text;
 }
 
@@ -413,6 +461,23 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
               : formatLast(items),
           );
         }
+        if (cb.data === 'menu:stats') {
+          await reply(cbChatId, '<b>Статистика лидов</b>\n\nВыберите период:', STATS_KEYBOARD);
+        }
+        if (cb.data === 'menu:last') {
+          await reply(cbChatId, '<b>Последние лиды</b>\n\nВыберите количество:', LAST_KEYBOARD);
+        }
+        const list = /^list:(application|quiz_contact|quiz_result)$/.exec(cb.data);
+        if (list) {
+          const type = list[1];
+          const items = await fetchLast(10, type);
+          await reply(
+            cbChatId,
+            items === null
+              ? 'Не удалось получить список лидов. Проверьте Google Таблицу.'
+              : formatTypedList(items, TYPE_LABELS[type] ?? type),
+          );
+        }
       }
       send(200, { ok: true });
       return;
@@ -440,7 +505,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
     const text = msg.text.trim();
     if (text === '/start') {
-      await reply(msg.chat.id, HELP_TEXT, STATS_KEYBOARD);
+      await reply(msg.chat.id, HELP_TEXT, START_KEYBOARD);
     } else if (text === '/last') {
       await reply(msg.chat.id, '<b>Последние лиды</b>\n\nВыберите количество:', LAST_KEYBOARD);
     } else if (text.startsWith('/stats')) {
