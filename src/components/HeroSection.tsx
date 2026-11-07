@@ -169,8 +169,20 @@ export function HeroSection({
                   transition={{ duration: 0.5, delay: 0.4 }}
                   className="text-lg sm:text-xl text-white/90 font-medium mb-4 max-w-2xl mx-auto"
                 >
-                  Андрагог, бизнес-тренер и коуч. Занимаюсь обучением и
-                  развитием взрослых более 18 лет.
+                  Я андрагог, бизнес-тренер и коуч. Уже более 18 лет занимаюсь обучением и
+                  развитием взрослых.
+                </motion.p>
+                <motion.p
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.5 }}
+                  className="text-base sm:text-lg text-text-secondary leading-relaxed mb-6 max-w-2xl mx-auto"
+                >
+                  Мои основные специалитеты: построение личного трека развития и публичные
+                  выступления. Работаю с людьми, которые внешне успешны, но внутри чувствуют:
+                  жизнь идёт не по их сценарию. Моя задача — помочь вам услышать себя, опереться
+                  на свои ценности и выстроить стратегию, в которой вы — автор, а не исполнитель
+                  чужих ожиданий.
                 </motion.p>
                 <motion.blockquote
                   initial={{ opacity: 0, y: 20 }}

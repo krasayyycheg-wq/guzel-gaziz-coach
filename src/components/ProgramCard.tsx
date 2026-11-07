@@ -113,7 +113,7 @@ export function ProgramCard({ program, index = 0 }: ProgramCardProps) {
           </div>
         </div>
 
-        {/* Test badge */}
+        {/* Test badge + Free consult */}
         <div className="space-y-3 mb-6">
           {program.testSlug && (
             <Link
@@ -126,6 +126,11 @@ export function ProgramCard({ program, index = 0 }: ProgramCardProps) {
               </span>
             </Link>
           )}
+          <div className="flex items-center gap-2 p-3 rounded-xl bg-accent/5 border border-accent/10">
+            <span className="text-sm text-accent font-medium">
+              Первая консультация бесплатная
+            </span>
+          </div>
         </div>
 
         <Link
