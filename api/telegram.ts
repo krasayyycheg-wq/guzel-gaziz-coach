@@ -104,11 +104,9 @@ const STATS_KEYBOARD = {
 /** Кнопки «Показать» под статистикой: выгрузка списка по типу. */
 const SHOW_KEYBOARD = {
   inline_keyboard: [
-    [
-      { text: '🔥 Показать', callback_data: 'list:application' },
-      { text: '⭐ Показать', callback_data: 'list:quiz_contact' },
-      { text: '📊 Показать', callback_data: 'list:quiz_result' },
-    ],
+    [{ text: '🔥 Показать заявки', callback_data: 'list:application' }],
+    [{ text: '⭐ Показать лидов с теста', callback_data: 'list:quiz_contact' }],
+    [{ text: '📊 Показать результаты теста', callback_data: 'list:quiz_result' }],
   ],
 };
 
