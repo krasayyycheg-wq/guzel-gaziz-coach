@@ -114,7 +114,7 @@ async function sendTelegram(text: string, sheetRow?: number): Promise<boolean> {
             reply_markup: {
               inline_keyboard: [
                 [
-                  { text: '✅ Связался', callback_data: `done:${sheetRow}` },
+                  { text: '✅ Отработан', callback_data: `done:${sheetRow}` },
                   { text: '⏳ Позже', callback_data: `later:${sheetRow}` },
                 ],
               ],

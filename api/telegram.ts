@@ -209,6 +209,7 @@ interface LeadRow {
   score?: number | string | null;
   profile?: string;
   message?: string;
+  status?: string;
 }
 
 function escapeHtml(value: string): string {
@@ -218,13 +219,14 @@ function escapeHtml(value: string): string {
     .replaceAll('>', '&gt;');
 }
 
-async function fetchLast(count: number, type?: string): Promise<LeadRow[] | null> {
+async function fetchLast(count: number, type?: string, status?: string): Promise<LeadRow[] | null> {
   const webapp = process.env.GOOGLE_SHEETS_WEBAPP_URL;
   if (!webapp) return null;
   const url = new URL(webapp);
   url.searchParams.set('action', 'last');
   url.searchParams.set('count', String(count));
   if (type) url.searchParams.set('type', type);
+  if (status) url.searchParams.set('status', status);
   const response = await fetch(url.toString(), { signal: AbortSignal.timeout(20000) });
   if (!response.ok) return null;
   const data = (await response.json()) as { ok?: boolean; items?: LeadRow[] };
@@ -271,6 +273,7 @@ function formatLast(items: LeadRow[]): string {
       const text = item.message.length > 100 ? `${item.message.slice(0, 100)}…` : item.message;
       lines.push(escapeHtml(text));
     }
+    if (item.status) lines.push(`Статус: ${escapeHtml(item.status)}`);
     lines.push('');
   }
   const text = lines.join('\n').trimEnd();
@@ -330,7 +333,35 @@ const HELP_TEXT = [
   '',
   '/stats — статистика лидов за период',
   '/last — последние лиды: 5, 10 или 15',
+  '/status — лиды по статусу: отработан, позже, без статуса',
 ].join('\n');
+
+/** Клавиатура фильтра по статусу. */
+const STATUS_FILTER_KEYBOARD = {
+  inline_keyboard: [
+    [{ text: 'Отработанные', callback_data: 'filter:contacted' }],
+    [{ text: 'Позже', callback_data: 'filter:later' }],
+    [{ text: 'Без статуса', callback_data: 'filter:none' }],
+  ],
+};
+
+const FILTER_LABELS: Record<string, string> = {
+  contacted: 'Отработанные',
+  later: 'Позже',
+  none: 'Без статуса',
+};
+
+/** Кнопки статуса под уведомлением о лиде. */
+function leadStatusKeyboard(row: number) {
+  return {
+    inline_keyboard: [
+      [
+        { text: '✅ Отработан', callback_data: `done:${row}` },
+        { text: '⏳ Позже', callback_data: `later:${row}` },
+      ],
+    ],
+  };
+}
 
 /** Однократная регистрация webhook (вызывается через GET ?action=setup&key=...). */
 async function setupWebhook(baseUrl: string): Promise<string> {
@@ -490,11 +521,11 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
               : formatTypedList(items, TYPE_LABELS[type] ?? type),
           );
         }
-        // --- Статусы лида: ✅ Связался / ⏳ Позже ---
+        // --- Статусы лида: ✅ Отработан / ⏳ Позже ---
         const statusMatch = /^(done|later):(\d+)$/.exec(cb.data);
         if (statusMatch) {
           const row = Number(statusMatch[2]);
-          const statusText = statusMatch[1] === 'done' ? '✅ Связался' : '⏳ Позже';
+          const statusText = statusMatch[1] === 'done' ? '✅ Отработан' : '⏳ Позже';
           const saved = await setLeadStatus(row, statusMatch[1] === 'done' ? 'contacted' : 'later');
           // Убираем кнопки под исходным уведомлением
           if (cb.message?.message_id) {
@@ -509,6 +540,42 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
             saved
               ? `${statusText} — статус записан в таблицу (строка ${row}).`
               : 'Не удалось записать статус в таблицу. Попробуйте ещё раз.',
+            saved
+              ? { inline_keyboard: [[{ text: '↩️ Отменить', callback_data: `undo:${row}` }]] }
+              : undefined,
+          );
+        }
+        // --- Отмена статуса: очищаем ячейку и возвращаем кнопки ---
+        const undoMatch = /^undo:(\d+)$/.exec(cb.data);
+        if (undoMatch) {
+          const row = Number(undoMatch[1]);
+          const cleared = await setLeadStatus(row, 'clear');
+          if (cb.message?.message_id) {
+            await tgApi('editMessageReplyMarkup', {
+              chat_id: cbChatId,
+              message_id: cb.message.message_id,
+              reply_markup: { inline_keyboard: [] },
+            });
+          }
+          await reply(
+            cbChatId,
+            cleared
+              ? `Статус снят (строка ${row}). Лид снова в работе.`
+              : 'Не удалось снять статус. Попробуйте ещё раз.',
+            cleared ? leadStatusKeyboard(row) : undefined,
+          );
+        }
+        // --- Фильтр по статусу ---
+        const filterMatch = /^filter:(contacted|later|none)$/.exec(cb.data);
+        if (filterMatch) {
+          const key = filterMatch[1];
+          const items = await fetchLast(15, undefined, key);
+          const label = FILTER_LABELS[key] ?? key;
+          await reply(
+            cbChatId,
+            items === null
+              ? 'Не удалось получить список лидов. Проверьте Google Таблицу.'
+              : `<b>${label}</b>\n\n${formatLast(items)}`,
           );
         }
       }
@@ -541,6 +608,8 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       await reply(msg.chat.id, HELP_TEXT, START_KEYBOARD);
     } else if (text === '/last') {
       await reply(msg.chat.id, '<b>Последние лиды</b>\n\nВыберите количество:', LAST_KEYBOARD);
+    } else if (text === '/status') {
+      await reply(msg.chat.id, '<b>Лиды по статусу</b>\n\nВыберите фильтр:', STATUS_FILTER_KEYBOARD);
     } else if (text.startsWith('/stats')) {
       const period = PERIODS.find((p) => p.match.test(text));
       if (!period) {
