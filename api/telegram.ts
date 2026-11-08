@@ -618,7 +618,9 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     }
     console.log('[telegram] команда:', msg.text, 'из чата', msg.chat.id);
 
-    const text = msg.text.trim();
+    // В группах Telegram добавляет имя бота: /ping@guzel_leads_bot.
+    // Убираем @username только у команды, сохраняя аргументы /find и /stats.
+    const text = msg.text.trim().replace(/^(\/[A-Za-z]+)@[A-Za-z0-9_]+(?=\s|$)/, '$1');
     if (text === '/start') {
       await reply(msg.chat.id, HELP_TEXT, START_KEYBOARD);
     } else if (text === '/last') {
