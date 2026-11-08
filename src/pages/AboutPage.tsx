@@ -155,7 +155,7 @@ export function AboutPage() {
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: index * 0.08, duration: 0.4, ease: 'easeOut' }}
-                  className="flex items-start gap-3 bg-bg-card rounded-xl border border-border p-4 sm:p-5"
+                  className="flex items-start gap-3 card-glass rounded-xl p-4 sm:p-5"
                 >
                   <span className="w-2 h-2 rounded-full bg-accent mt-2 flex-shrink-0" />
                   <span className="text-text-secondary text-sm sm:text-base">{item}</span>
@@ -193,7 +193,7 @@ export function AboutPage() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1, duration: 0.5, ease: 'easeOut' }}
-                className="bg-bg-card rounded-2xl border border-border p-6 text-center"
+                className="card-glass rounded-2xl p-6 text-center"
               >
                 <div className="text-3xl sm:text-4xl font-bold text-accent font-mono mb-2">
                   {stat.value}
@@ -219,7 +219,7 @@ export function AboutPage() {
               </p>
             </div>
 
-            <div className="bg-bg-card rounded-2xl border border-border p-6 sm:p-8">
+            <div className="card-glass rounded-2xl p-6 sm:p-8">
               <ApplicationForm program="general" />
             </div>
           </div>

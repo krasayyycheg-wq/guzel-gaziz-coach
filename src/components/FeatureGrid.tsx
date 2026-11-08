@@ -29,7 +29,7 @@ export function FeatureGrid({ features, columns = 3 }: FeatureGridProps) {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: '-60px' }}
           transition={{ delay: index * 0.1, duration: 0.5, ease: 'easeOut' }}
-          className="bg-bg-card rounded-2xl p-6 sm:p-8 border border-border hover:border-accent/30 transition-all duration-300 hover:shadow-[0_0_30px_rgba(255,214,0,0.1)]"
+          className="card-glass rounded-2xl p-6 sm:p-8 hover:border-accent/30 transition-all duration-300 hover:shadow-[0_0_30px_rgba(255,214,0,0.1)]"
         >
           <motion.div
             className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center mb-5"

@@ -73,7 +73,7 @@ export function HeroSection({
       className="relative min-h-[100dvh] flex items-center justify-center overflow-hidden bg-transparent"
     >
       <motion.div
-        style={reducedMotion ? undefined : { opacity: isHomePage ? opacity : undefined }}
+        style={reducedMotion ? undefined : { opacity: isHomePage && !hasImage ? opacity : undefined }}
         className={`relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-20 sm:py-32 ${
           hasImage ? '' : 'text-center'
         }`}
@@ -86,8 +86,8 @@ export function HeroSection({
           {/* Text Content */}
           <div
             className={`text-center ${
-              hasImage ? 'lg:text-left' : 'max-w-3xl mx-auto'
-            } ${hasImage ? 'lg:order-1' : ''}`}
+              hasImage ? 'contents lg:block lg:text-left lg:order-1' : 'max-w-3xl mx-auto'
+            }`}
           >
             {isHomePage ? (
               <motion.div
@@ -189,7 +189,7 @@ export function HeroSection({
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.6 }}
-                  className="relative max-w-xl mx-auto mb-10 px-6 py-4 border-l-2 border-accent/40"
+                  className="relative order-6 max-w-xl mx-auto mb-10 px-6 py-4 border-l-2 border-accent/40"
                 >
                   <p className="text-sm sm:text-base text-text-secondary italic leading-relaxed">
                     «Искренне считаю, что секрет успеха – в умении использовать свой личный
@@ -231,7 +231,7 @@ export function HeroSection({
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.7 }}
-                className="flex flex-col sm:flex-row gap-3 justify-center items-center"
+                className="order-7 flex flex-col sm:flex-row gap-3 justify-center items-center"
               >
                 <GlowButton variant="outline" onClick={() => navigate('/about')}>
                   Обо мне
@@ -285,7 +285,7 @@ export function HeroSection({
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.8, delay: 0.2 }}
-              className="relative lg:order-2"
+              className="relative order-5 lg:order-2"
             >
               <div className="relative aspect-[3/4] sm:aspect-[4/5] max-w-md mx-auto lg:max-w-none">
                 {/* Decorative gradient frame */}
