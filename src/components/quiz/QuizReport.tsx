@@ -631,7 +631,7 @@ export function QuizReport({ result, onSave }: QuizReportProps) {
             {/* Labels */}
             {SCALES.map((scale, i) => {
               const angle = i * angleStep - Math.PI / 2;
-              const labelRadius = pRadius + 80;
+              const labelRadius = pRadius + 52;
               const x = pCenter + labelRadius * Math.cos(angle);
               const y = pCenter + labelRadius * Math.sin(angle);
               const isBottom = angle > Math.PI / 4 && angle < (3 * Math.PI) / 4;
@@ -813,7 +813,7 @@ export function QuizReport({ result, onSave }: QuizReportProps) {
             ICF Certified. Программа «Личная стратегия развития»
           </div>
           <div style={{ fontSize: '12px', color: '#B8860B', marginTop: '8px' }}>
-            https://guzel-gaziz-coach.vercel.app
+            https://www.guzelgaziz.ru
           </div>
         </div>
       </div>
