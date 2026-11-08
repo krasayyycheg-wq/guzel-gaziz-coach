@@ -237,8 +237,14 @@ export function QuizReport({ result, onSave }: QuizReportProps) {
             transition={{ delay: 0.5 }}
             className="flex justify-center mb-10"
           >
-            <div className="relative" style={{ padding: '30px' }}>
-              <svg width={radarSize} height={radarSize} viewBox={`0 0 ${radarSize} ${radarSize}`} style={{ overflow: 'visible' }}>
+            <div className="relative w-full max-w-[420px] p-0 sm:p-[30px]">
+              <svg
+                width={radarSize}
+                height={radarSize}
+                viewBox="-70 -40 500 500"
+                className="block h-auto w-full"
+                style={{ overflow: 'visible' }}
+              >
                 {/* Grid */}
                 {[0.25, 0.5, 0.75, 1].map((level) => (
                   <polygon
@@ -479,7 +485,7 @@ export function QuizReport({ result, onSave }: QuizReportProps) {
             <button
               onClick={downloadAsImage}
               disabled={saveKind !== null}
-              className="flex items-center gap-2 px-5 py-3 bg-bg-card border border-border text-white rounded-lg hover:bg-bg-secondary transition-colors text-sm disabled:opacity-60 disabled:cursor-wait"
+              className="flex min-h-11 items-center justify-center gap-2 px-5 py-3 bg-bg-card border border-border text-white rounded-lg hover:bg-bg-secondary transition-colors text-sm disabled:opacity-60 disabled:cursor-wait"
             >
               <Download size={16} />
               {saveKind === 'png' ? 'Сохраняем PNG…' : 'Сохранить как PNG'}
@@ -487,7 +493,7 @@ export function QuizReport({ result, onSave }: QuizReportProps) {
             <button
               onClick={downloadAsPDF}
               disabled={saveKind !== null}
-              className="flex items-center gap-2 px-5 py-3 bg-bg-card border border-border text-white rounded-lg hover:bg-bg-secondary transition-colors text-sm disabled:opacity-60 disabled:cursor-wait"
+              className="flex min-h-11 items-center justify-center gap-2 px-5 py-3 bg-bg-card border border-border text-white rounded-lg hover:bg-bg-secondary transition-colors text-sm disabled:opacity-60 disabled:cursor-wait"
             >
               <Download size={16} />
               {saveKind === 'pdf'
@@ -496,7 +502,7 @@ export function QuizReport({ result, onSave }: QuizReportProps) {
             </button>
             <button
               onClick={() => setShowEmailInput(!showEmailInput)}
-              className="flex items-center gap-2 px-5 py-3 bg-bg-card border border-border text-white rounded-lg hover:bg-bg-secondary transition-colors text-sm"
+              className="flex min-h-11 items-center justify-center gap-2 px-5 py-3 bg-bg-card border border-border text-white rounded-lg hover:bg-bg-secondary transition-colors text-sm"
             >
               <Mail size={16} />
               Отправить на email
@@ -507,18 +513,20 @@ export function QuizReport({ result, onSave }: QuizReportProps) {
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
-              className="flex gap-3 justify-center"
+              className="flex flex-col sm:flex-row gap-3 justify-center"
             >
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="your@email.com"
-                className="px-4 py-3 bg-bg-card border border-border rounded-lg text-white placeholder-text-muted focus:outline-none focus:border-accent w-64"
+                autoComplete="email"
+                aria-label="Email для отправки результата"
+                className="min-h-11 w-full sm:w-64 px-4 py-3 bg-bg-card border border-border rounded-lg text-white placeholder-text-muted focus:outline-none focus:border-accent"
               />
               <button
                 onClick={handleEmailSave}
-                className="px-5 py-3 bg-accent text-bg-primary font-medium rounded-lg hover:bg-accent-hover transition-colors"
+                className="min-h-11 px-5 py-3 bg-accent text-bg-primary font-medium rounded-lg hover:bg-accent-hover transition-colors"
               >
                 Отправить
               </button>
@@ -528,7 +536,7 @@ export function QuizReport({ result, onSave }: QuizReportProps) {
           <div className="text-center mt-6">
             <button
               onClick={() => window.location.reload()}
-              className="inline-flex items-center gap-2 text-accent hover:text-accent-hover transition-colors text-sm"
+              className="inline-flex min-h-11 items-center gap-2 px-3 text-accent hover:text-accent-hover transition-colors text-sm"
             >
               <Share2 size={16} />
               Пройти тест заново

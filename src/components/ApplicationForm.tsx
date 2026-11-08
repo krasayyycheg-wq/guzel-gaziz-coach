@@ -290,7 +290,7 @@ export function ApplicationModal({
             <button
               onClick={onClose}
               aria-label="Закрыть"
-              className="absolute top-4 right-4 p-2 text-text-muted hover:text-white transition-colors"
+              className="absolute top-3 right-3 flex h-11 w-11 items-center justify-center text-text-muted hover:text-white transition-colors"
             >
               <X size={20} />
             </button>

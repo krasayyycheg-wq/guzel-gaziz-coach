@@ -68,7 +68,7 @@ export function CookieBanner() {
               x: { duration: 22, repeat: Infinity, ease: 'easeInOut' },
               y: { duration: 22, repeat: Infinity, ease: 'easeInOut' },
             }}
-            className="fixed bottom-6 left-6 z-40 pointer-events-none"
+            className="fixed bottom-6 left-6 z-30 pointer-events-none"
           >
             <motion.button
               animate={reducedMotion ? undefined : {

@@ -81,7 +81,7 @@ export function Navigation() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-16 sm:h-20">
             {/* Logo */}
-            <Link to="/" className="flex items-center">
+            <Link to="/" className="flex min-w-11 min-h-11 items-center" aria-label="На главную">
               <span className="font-mono text-xl sm:text-2xl font-bold tracking-tighter text-white">
                 GG
               </span>
@@ -124,7 +124,7 @@ export function Navigation() {
               </div>
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="md:hidden p-2 text-white"
+                className="md:hidden flex h-11 w-11 items-center justify-center text-white"
                 aria-label={isMobileMenuOpen ? 'Закрыть меню' : 'Открыть меню'}
                 aria-expanded={isMobileMenuOpen}
                 aria-controls="mobile-menu"
@@ -161,7 +161,7 @@ export function Navigation() {
                   <Link
                     to={item.path}
                     onClick={() => handleNavClick(item.path)}
-                    className={`text-2xl font-medium ${
+                    className={`flex min-h-11 items-center justify-center px-4 text-2xl font-medium ${
                       isActive(item.path) ? 'text-accent' : 'text-white'
                     }`}
                   >

@@ -67,25 +67,25 @@ export function QuizWelcome({ onStart }: QuizWelcomeProps) {
 
         <div className="space-y-3">
           <p className="text-sm font-medium text-white mb-3">Шкала ответов:</p>
-          <div className="grid grid-cols-5 gap-2 text-center text-xs sm:text-sm">
-            <div className="p-2 sm:p-3 bg-bg-secondary rounded-lg">
-              <div className="text-lg sm:text-xl font-bold text-danger mb-1">1</div>
+          <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-5 sm:text-center sm:text-sm">
+            <div className="flex items-center gap-3 p-3 bg-bg-secondary rounded-lg sm:block">
+              <div className="text-lg sm:text-xl font-bold text-danger sm:mb-1">1</div>
               <div className="text-text-muted">Совсем не про меня</div>
             </div>
-            <div className="p-2 sm:p-3 bg-bg-secondary rounded-lg">
-              <div className="text-lg sm:text-xl font-bold text-warning mb-1">2</div>
+            <div className="flex items-center gap-3 p-3 bg-bg-secondary rounded-lg sm:block">
+              <div className="text-lg sm:text-xl font-bold text-warning sm:mb-1">2</div>
               <div className="text-text-muted">Скорее не про меня</div>
             </div>
-            <div className="p-2 sm:p-3 bg-bg-secondary rounded-lg">
-              <div className="text-lg sm:text-xl font-bold text-text-secondary mb-1">3</div>
+            <div className="flex items-center gap-3 p-3 bg-bg-secondary rounded-lg sm:block">
+              <div className="text-lg sm:text-xl font-bold text-text-secondary sm:mb-1">3</div>
               <div className="text-text-muted">Бывает по-разному</div>
             </div>
-            <div className="p-2 sm:p-3 bg-bg-secondary rounded-lg">
-              <div className="text-lg sm:text-xl font-bold text-success mb-1">4</div>
+            <div className="flex items-center gap-3 p-3 bg-bg-secondary rounded-lg sm:block">
+              <div className="text-lg sm:text-xl font-bold text-success sm:mb-1">4</div>
               <div className="text-text-muted">Скорее про меня</div>
             </div>
-            <div className="p-2 sm:p-3 bg-bg-secondary rounded-lg">
-              <div className="text-lg sm:text-xl font-bold text-accent mb-1">5</div>
+            <div className="flex items-center gap-3 p-3 bg-bg-secondary rounded-lg sm:block">
+              <div className="text-lg sm:text-xl font-bold text-accent sm:mb-1">5</div>
               <div className="text-text-muted">Очень про меня</div>
             </div>
           </div>

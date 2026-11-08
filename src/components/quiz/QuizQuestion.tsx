@@ -92,8 +92,8 @@ export function QuizQuestionComponent({
         </AnimatePresence>
       </div>
 
-      {/* Answers — horizontal grid, fixed position */}
-      <div className="grid grid-cols-5 gap-1.5 sm:gap-3 mb-8">
+      {/* На телефоне — полноразмерные строки, на десктопе — пять колонок */}
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-5 sm:gap-3 mb-8">
         {[1, 2, 3, 4, 5].map((value) => {
           const isSelected = selectedAnswer === value;
           const style = isSelected ? selectedGradients[value - 1] : answerGradients[value - 1];
@@ -102,15 +102,15 @@ export function QuizQuestionComponent({
               key={value}
               onClick={() => onAnswer(value)}
               whileTap={{ scale: 0.96 }}
-              className="flex flex-col items-center justify-center p-2 sm:p-4 rounded-xl border-2 transition-all duration-200 text-center"
+              className="flex min-h-14 flex-row items-center justify-start gap-4 px-4 py-3 rounded-xl border-2 transition-all duration-200 text-left sm:min-h-0 sm:flex-col sm:justify-center sm:gap-0 sm:p-4 sm:text-center"
               style={{
                 background: style.bg,
                 borderColor: style.border,
                 color: style.text,
               }}
             >
-              <span className="text-base sm:text-xl font-bold mb-0.5 sm:mb-1">{value}</span>
-              <span className="text-[10px] sm:text-xs leading-tight">{answerLabels[value - 1]}</span>
+              <span className="text-lg sm:text-xl font-bold sm:mb-1">{value}</span>
+              <span className="text-sm sm:text-xs leading-tight">{answerLabels[value - 1]}</span>
             </motion.button>
           );
         })}
