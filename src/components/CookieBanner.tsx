@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { Cookie, X } from 'lucide-react';
 import { loadMetrika } from '../utils/metrika';
 
 const CONSENT_KEY = 'cookie_consent';
 
 export function CookieBanner() {
+  const reducedMotion = useReducedMotion();
   const [showIcon, setShowIcon] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
 
@@ -37,17 +38,28 @@ export function CookieBanner() {
       {/* Floating cookie icon */}
       <AnimatePresence>
         {showIcon && (
-          <motion.button
+          <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
-            transition={{ duration: 0.2 }}
-            onClick={() => setShowPopup(true)}
-            aria-label="Настройки cookies"
-            className="fixed bottom-6 left-6 z-40 w-12 h-12 rounded-full bg-bg-card border border-border text-accent shadow-lg flex items-center justify-center hover:border-accent/40 transition-colors"
+            transition={{ duration: 0.3 }}
+            className="fixed bottom-6 left-6 z-40"
           >
-            <Cookie size={20} />
-          </motion.button>
+            <motion.button
+              animate={reducedMotion ? undefined : {
+                y: [0, -10, 0],
+                x: [0, 4, 0],
+                rotate: [0, 4, 0, -4, 0],
+              }}
+              transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+              onClick={() => setShowPopup(true)}
+              aria-label="Настройки cookies"
+              title="Настроить cookies"
+              className="w-12 h-12 rounded-full bg-bg-card border border-accent/30 text-accent shadow-[0_8px_30px_rgba(255,214,0,0.12)] flex items-center justify-center hover:border-accent/60 transition-colors"
+            >
+              <Cookie size={20} />
+            </motion.button>
+          </motion.div>
         )}
       </AnimatePresence>
 
@@ -108,7 +120,7 @@ export function CookieBanner() {
                   onClick={accept}
                   className="px-4 py-2.5 rounded-xl text-sm font-semibold bg-accent text-bg-primary hover:bg-accent-hover transition-colors"
                 >
-                  Ок
+                  Принять все
                 </button>
               </div>
             </motion.div>
