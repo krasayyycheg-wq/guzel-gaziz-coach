@@ -439,7 +439,7 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
             signal: AbortSignal.timeout(8000),
           }),
         ]);
-        const me = (await meResponse.json()) as { ok?: boolean };
+        const me = (await meResponse.json()) as { ok?: boolean; result?: { id?: number } };
         const webhook = (await webhookResponse.json()) as {
           ok?: boolean;
           result?: {
@@ -449,6 +449,31 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
             last_error_date?: number;
           };
         };
+        let chatAccessible: boolean | null = null;
+        let botChatStatus: string | null = null;
+        let chatError: string | null = null;
+        const chatId = process.env.TELEGRAM_CHAT_ID;
+        if (chatId && me.result?.id) {
+          const query = `chat_id=${encodeURIComponent(chatId)}`;
+          const [chatResponse, memberResponse] = await Promise.all([
+            fetch(`https://api.telegram.org/bot${token}/getChat?${query}`, {
+              signal: AbortSignal.timeout(8000),
+            }),
+            fetch(
+              `https://api.telegram.org/bot${token}/getChatMember?${query}&user_id=${me.result.id}`,
+              { signal: AbortSignal.timeout(8000) },
+            ),
+          ]);
+          const chat = (await chatResponse.json()) as { ok?: boolean; description?: string };
+          const member = (await memberResponse.json()) as {
+            ok?: boolean;
+            description?: string;
+            result?: { status?: string };
+          };
+          chatAccessible = chat.ok === true;
+          botChatStatus = member.result?.status ?? null;
+          chatError = chat.description ?? member.description ?? null;
+        }
         const info = webhook.result;
         send(200, {
           ok: true,
@@ -461,6 +486,9 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
           lastWebhookErrorDate: info?.last_error_date
             ? new Date(info.last_error_date * 1000).toISOString()
             : null,
+          chatAccessible,
+          botChatStatus,
+          chatError,
         });
       } catch (error) {
         send(200, { ok: true, configuration, telegramApi: false, error: String(error) });
