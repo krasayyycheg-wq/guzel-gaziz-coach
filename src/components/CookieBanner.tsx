@@ -10,6 +10,10 @@ export function CookieBanner() {
   const reducedMotion = useReducedMotion();
   const [showIcon, setShowIcon] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
+  const [viewport, setViewport] = useState(() => ({
+    width: typeof window === 'undefined' ? 0 : window.innerWidth,
+    height: typeof window === 'undefined' ? 0 : window.innerHeight,
+  }));
 
   useEffect(() => {
     const consent = localStorage.getItem(CONSENT_KEY);
@@ -19,6 +23,17 @@ export function CookieBanner() {
       loadMetrika();
     }
   }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setViewport({ width: window.innerWidth, height: window.innerHeight });
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const travelX = Math.max(viewport.width - 88, 0);
+  const travelY = Math.max(viewport.height - 104, 0);
 
   const accept = () => {
     localStorage.setItem(CONSENT_KEY, 'all');
@@ -40,10 +55,20 @@ export function CookieBanner() {
         {showIcon && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
+            animate={reducedMotion ? { opacity: 1, scale: 1 } : {
+              opacity: 1,
+              scale: 1,
+              x: [0, travelX * 0.7, travelX, travelX * 0.2, 0],
+              y: [0, -travelY * 0.35, -travelY * 0.85, -travelY, 0],
+            }}
             exit={{ opacity: 0, scale: 0.8 }}
-            transition={{ duration: 0.3 }}
-            className="fixed bottom-6 left-6 z-40"
+            transition={reducedMotion ? { duration: 0.3 } : {
+              opacity: { duration: 0.3 },
+              scale: { duration: 0.3 },
+              x: { duration: 22, repeat: Infinity, ease: 'easeInOut' },
+              y: { duration: 22, repeat: Infinity, ease: 'easeInOut' },
+            }}
+            className="fixed bottom-6 left-6 z-40 pointer-events-none"
           >
             <motion.button
               animate={reducedMotion ? undefined : {
@@ -55,7 +80,7 @@ export function CookieBanner() {
               onClick={() => setShowPopup(true)}
               aria-label="Настройки cookies"
               title="Настроить cookies"
-              className="w-12 h-12 rounded-full bg-bg-card border border-accent/30 text-accent shadow-[0_8px_30px_rgba(255,214,0,0.12)] flex items-center justify-center hover:border-accent/60 transition-colors"
+              className="pointer-events-auto w-12 h-12 rounded-full bg-bg-card border border-accent/30 text-accent shadow-[0_8px_30px_rgba(255,214,0,0.12)] flex items-center justify-center hover:border-accent/60 transition-colors"
             >
               <Cookie size={20} />
             </motion.button>
