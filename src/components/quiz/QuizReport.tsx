@@ -7,19 +7,21 @@ import { SCALES } from '../../data/testData';
 import { getLevelColor, getLevelLabel } from '../../utils/calculations';
 import { GlowButton } from '../GlowButton';
 import { ApplicationModal } from '../ApplicationForm';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
-
 interface QuizReportProps {
   result: TestResult;
   onSave: (email: string) => void;
 }
 
+const waitForPaint = () => new Promise<void>((resolve) => {
+  requestAnimationFrame(() => resolve());
+});
+
 export function QuizReport({ result, onSave }: QuizReportProps) {
   const navigate = useNavigate();
   const reportRef = useRef<HTMLDivElement>(null);
   const printableRef = useRef<HTMLDivElement>(null);
-  const [isSaving, setIsSaving] = useState(false);
+  const [saveKind, setSaveKind] = useState<'png' | 'pdf' | null>(null);
+  const [saveProgress, setSaveProgress] = useState('');
   const [email, setEmail] = useState('');
   const [showEmailInput, setShowEmailInput] = useState(false);
   const [isApplicationOpen, setIsApplicationOpen] = useState(false);
@@ -39,16 +41,17 @@ export function QuizReport({ result, onSave }: QuizReportProps) {
 
   const capturePrintable = async () => {
     if (!printableRef.current) return null;
+    const { default: html2canvas } = await import('html2canvas');
     return html2canvas(printableRef.current, {
       backgroundColor: '#FFFFFF',
-      scale: 2,
+      scale: 1.5,
       useCORS: true,
       logging: false,
     });
   };
 
   const downloadAsImage = async () => {
-    setIsSaving(true);
+    setSaveKind('png');
     try {
       const canvas = await capturePrintable();
       if (!canvas) return;
@@ -58,63 +61,84 @@ export function QuizReport({ result, onSave }: QuizReportProps) {
       link.click();
     } catch (error) {
       console.error('Error saving image:', error);
+    } finally {
+      setSaveKind(null);
     }
-    setIsSaving(false);
   };
 
   const downloadAsPDF = async () => {
-    setIsSaving(true);
+    setSaveKind('pdf');
+    setSaveProgress('');
     try {
-      const canvas = await capturePrintable();
-      if (!canvas) return;
+      // Каждый смысловой блок printable-отчёта собираем отдельно:
+      // заголовок, радар, шкалы, описание, опоры и подвал.
+      const sections = printableRef.current
+        ? Array.from(printableRef.current.querySelectorAll<HTMLElement>(':scope > div'))
+        : [];
+      if (sections.length === 0) return;
 
+      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf'),
+      ]);
       const pdf = new jsPDF('p', 'mm', 'a4');
       const pageWidthMm = 210;
       const pageHeightMm = 297;
-      const pageHeightPx = Math.floor((canvas.width * pageHeightMm) / pageWidthMm);
-      let pageNumber = 0;
+      const marginMm = 12;
+      const sectionGapMm = 6;
+      const contentWidthMm = pageWidthMm - marginMm * 2;
+      const maxSectionHeightMm = pageHeightMm - marginMm * 2;
+      let yMm = marginMm;
 
-      for (let sourceY = 0; sourceY < canvas.height; sourceY += pageHeightPx) {
-        const sourceHeight = Math.min(pageHeightPx, canvas.height - sourceY);
-        const pageCanvas = document.createElement('canvas');
-        pageCanvas.width = canvas.width;
-        pageCanvas.height = sourceHeight;
+      for (let index = 0; index < sections.length; index += 1) {
+        setSaveProgress(`${index + 1}/${sections.length}`);
+        await waitForPaint();
 
-        const context = pageCanvas.getContext('2d');
-        if (!context) throw new Error('Не удалось подготовить страницу PDF');
+        const canvas = await html2canvas(sections[index], {
+          backgroundColor: '#FFFFFF',
+          scale: 1.5,
+          useCORS: true,
+          logging: false,
+        });
+        let renderWidthMm = contentWidthMm;
+        let renderHeightMm = (canvas.height * renderWidthMm) / canvas.width;
 
-        context.fillStyle = '#FFFFFF';
-        context.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-        context.drawImage(
-          canvas,
-          0,
-          sourceY,
-          canvas.width,
-          sourceHeight,
-          0,
-          0,
-          canvas.width,
-          sourceHeight,
-        );
+        // Очень длинный нестандартный блок целиком уменьшаем до страницы,
+        // но никогда не обрезаем строки и карточки посередине.
+        if (renderHeightMm > maxSectionHeightMm) {
+          const fitRatio = maxSectionHeightMm / renderHeightMm;
+          renderWidthMm *= fitRatio;
+          renderHeightMm = maxSectionHeightMm;
+        }
 
-        if (pageNumber > 0) pdf.addPage();
-        const renderedHeightMm = (sourceHeight * pageWidthMm) / canvas.width;
+        if (yMm > marginMm && yMm + renderHeightMm > pageHeightMm - marginMm) {
+          pdf.addPage();
+          yMm = marginMm;
+        }
+
         pdf.addImage(
-          pageCanvas.toDataURL('image/png'),
-          'PNG',
-          0,
-          0,
-          pageWidthMm,
-          renderedHeightMm,
+          canvas.toDataURL('image/jpeg', 0.94),
+          'JPEG',
+          (pageWidthMm - renderWidthMm) / 2,
+          yMm,
+          renderWidthMm,
+          renderHeightMm,
+          undefined,
+          'FAST',
         );
-        pageNumber += 1;
+        yMm += renderHeightMm + sectionGapMm;
+
+        // Освобождаем холст перед следующим блоком, не держа весь отчёт в памяти.
+        canvas.width = 1;
+        canvas.height = 1;
       }
 
       pdf.save(`result-${result.profile.key}.pdf`);
     } catch (error) {
       console.error('Error saving PDF:', error);
     } finally {
-      setIsSaving(false);
+      setSaveKind(null);
+      setSaveProgress('');
     }
   };
 
@@ -454,19 +478,21 @@ export function QuizReport({ result, onSave }: QuizReportProps) {
           <div className="flex flex-wrap gap-3 justify-center">
             <button
               onClick={downloadAsImage}
-              disabled={isSaving}
-              className="flex items-center gap-2 px-5 py-3 bg-bg-card border border-border text-white rounded-lg hover:bg-bg-secondary transition-colors text-sm"
+              disabled={saveKind !== null}
+              className="flex items-center gap-2 px-5 py-3 bg-bg-card border border-border text-white rounded-lg hover:bg-bg-secondary transition-colors text-sm disabled:opacity-60 disabled:cursor-wait"
             >
               <Download size={16} />
-              Сохранить как PNG
+              {saveKind === 'png' ? 'Сохраняем PNG…' : 'Сохранить как PNG'}
             </button>
             <button
               onClick={downloadAsPDF}
-              disabled={isSaving}
-              className="flex items-center gap-2 px-5 py-3 bg-bg-card border border-border text-white rounded-lg hover:bg-bg-secondary transition-colors text-sm"
+              disabled={saveKind !== null}
+              className="flex items-center gap-2 px-5 py-3 bg-bg-card border border-border text-white rounded-lg hover:bg-bg-secondary transition-colors text-sm disabled:opacity-60 disabled:cursor-wait"
             >
               <Download size={16} />
-              Сохранить как PDF
+              {saveKind === 'pdf'
+                ? `Готовим PDF${saveProgress ? ` ${saveProgress}` : '…'}`
+                : 'Сохранить как PDF'}
             </button>
             <button
               onClick={() => setShowEmailInput(!showEmailInput)}
