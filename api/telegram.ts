@@ -417,6 +417,56 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
   // --- Регистрация webhook ---
   if (req.method === 'GET') {
     const url = new URL(req.url ?? '/', 'https://local');
+    // Публичная диагностика без секретов: показывает только наличие переменных,
+    // доступность Bot API и состояние webhook, но не токен или ID чата.
+    if (url.searchParams.get('action') === 'health') {
+      const token = process.env.TELEGRAM_BOT_TOKEN;
+      const configuration = {
+        botToken: Boolean(token),
+        chatId: Boolean(process.env.TELEGRAM_CHAT_ID),
+        webhookSecret: Boolean(process.env.TELEGRAM_WEBHOOK_SECRET),
+      };
+      if (!token) {
+        send(200, { ok: true, configuration, telegramApi: false });
+        return;
+      }
+      try {
+        const [meResponse, webhookResponse] = await Promise.all([
+          fetch(`https://api.telegram.org/bot${token}/getMe`, {
+            signal: AbortSignal.timeout(8000),
+          }),
+          fetch(`https://api.telegram.org/bot${token}/getWebhookInfo`, {
+            signal: AbortSignal.timeout(8000),
+          }),
+        ]);
+        const me = (await meResponse.json()) as { ok?: boolean };
+        const webhook = (await webhookResponse.json()) as {
+          ok?: boolean;
+          result?: {
+            url?: string;
+            pending_update_count?: number;
+            last_error_message?: string;
+            last_error_date?: number;
+          };
+        };
+        const info = webhook.result;
+        send(200, {
+          ok: true,
+          configuration,
+          telegramApi: me.ok === true,
+          webhookConfigured: Boolean(info?.url),
+          webhookMatches: info?.url === 'https://www.guzelgaziz.ru/api/telegram',
+          pendingUpdates: info?.pending_update_count ?? 0,
+          lastWebhookError: info?.last_error_message ?? null,
+          lastWebhookErrorDate: info?.last_error_date
+            ? new Date(info.last_error_date * 1000).toISOString()
+            : null,
+        });
+      } catch (error) {
+        send(200, { ok: true, configuration, telegramApi: false, error: String(error) });
+      }
+      return;
+    }
     if (url.searchParams.get('action') === 'info') {
       if (url.searchParams.get('key') !== process.env.TELEGRAM_WEBHOOK_SECRET) {
         send(403, { ok: false, error: 'forbidden' });
