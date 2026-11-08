@@ -683,8 +683,21 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
       return;
     }
 
-    // Отвечаем в группе TELEGRAM_CHAT_ID, а в личке — только участникам этой группы
+    // В группах Telegram добавляет имя бота: /ping@guzel_leads_bot.
+    // Убираем @username только у команды, сохраняя аргументы /find и /stats.
+    const text = msg.text.trim().replace(/^(\/[A-Za-z]+)@[A-Za-z0-9_]+(?=\s|$)/, '$1');
+
+    // Отвечаем в группе TELEGRAM_CHAT_ID, а в личке — только участникам этой группы.
+    // /chatid безопасно помогает подключить новую группу: выводит только её собственный ID.
     if (String(msg.chat.id) !== String(chatId)) {
+      if (msg.chat.type !== 'private' && (text === '/chatid' || text === '/ping')) {
+        await reply(
+          msg.chat.id,
+          `✅ Бот на связи.\nID этой группы: <code>${msg.chat.id}</code>\n\nГруппа пока не подключена к уведомлениям сайта.`,
+        );
+        send(200, { ok: true });
+        return;
+      }
       const fromId = msg.from?.id;
       const allowed =
         msg.chat.type === 'private' && fromId ? await isGroupMember(chatId, fromId) : false;
@@ -696,9 +709,6 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     }
     console.log('[telegram] команда:', msg.text, 'из чата', msg.chat.id);
 
-    // В группах Telegram добавляет имя бота: /ping@guzel_leads_bot.
-    // Убираем @username только у команды, сохраняя аргументы /find и /stats.
-    const text = msg.text.trim().replace(/^(\/[A-Za-z]+)@[A-Za-z0-9_]+(?=\s|$)/, '$1');
     if (text === '/start') {
       await reply(msg.chat.id, HELP_TEXT, START_KEYBOARD);
     } else if (text === '/last') {
