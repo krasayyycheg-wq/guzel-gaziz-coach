@@ -33,9 +33,62 @@ const leadSchema = z.object({
   page: z.string().max(300).optional(),
   utm: z.record(z.string(), z.string().max(300)).optional(),
   timestamp: z.string().max(50).optional(),
+  // Антиспам-поля не передаются дальше в таблицы и уведомления.
+  website: z.string().max(200).optional(),
+  formStartedAt: z.number().int().nonnegative().optional(),
 });
 
 type Lead = z.infer<typeof leadSchema>;
+
+const RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const RATE_LIMIT_MAX_ATTEMPTS = 10;
+const rateLimits = new Map<string, { count: number; resetAt: number }>();
+
+/** Best-effort ограничение в пределах warm serverless instance. */
+export function isRateLimited(key: string, now = Date.now()): boolean {
+  const current = rateLimits.get(key);
+  if (!current || current.resetAt <= now) {
+    if (rateLimits.size > 1000) {
+      for (const [ip, value] of rateLimits) {
+        if (value.resetAt <= now) rateLimits.delete(ip);
+      }
+    }
+    rateLimits.set(key, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return false;
+  }
+  current.count += 1;
+  return current.count > RATE_LIMIT_MAX_ATTEMPTS;
+}
+
+/** Ловит только явные автоматические комбинации, не оценивая «качество» контактов. */
+export function isObviouslyAutomatedLead(lead: {
+  name?: string;
+  email?: string;
+  phone?: string;
+}): boolean {
+  const name = lead.name?.trim() ?? '';
+  if (/^[A-Za-z]{12,}$/.test(name)) {
+    const uppercase = name.replace(/[^A-Z]/g, '').length;
+    const lowercase = name.replace(/[^a-z]/g, '').length;
+    if (uppercase >= 4 && lowercase >= 4 && uppercase / name.length >= 0.3) return true;
+  }
+
+  const email = lead.email?.trim().toLowerCase() ?? '';
+  const [local = '', domain = ''] = email.split('@');
+  const excessiveGmailDots =
+    domain === 'gmail.com' && (local.match(/\./g) ?? []).length >= 5;
+  const phone = lead.phone?.trim() ?? '';
+  const digits = phone.replace(/\D/g, '');
+  const malformedRussianPhone =
+    phone.length > 0 && !phone.startsWith('+') && digits.startsWith('8') && digits.length !== 11;
+  return excessiveGmailDots && malformedRussianPhone;
+}
+
+export function isSuspiciouslyFast(formStartedAt: number | undefined, now = Date.now()): boolean {
+  if (formStartedAt === undefined) return false;
+  if (formStartedAt > now + 5 * 60 * 1000) return true;
+  return formStartedAt <= now && now - formStartedAt < 3000;
+}
 
 const PROGRAM_LABELS: Record<string, string> = {
   'life-strategy': 'Личная стратегия развития',
@@ -229,12 +282,29 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
     return;
   }
 
+  const forwardedFor = req.headers['x-forwarded-for'];
+  const ip =
+    (Array.isArray(forwardedFor) ? forwardedFor[0] : forwardedFor)?.split(',')[0].trim() ||
+    req.socket.remoteAddress ||
+    'unknown';
+  if (isRateLimited(ip)) {
+    res.setHeader('Retry-After', '600');
+    send(429, { ok: false, error: 'too_many_requests' });
+    return;
+  }
+
   const parsed = leadSchema.safeParse(body);
   if (!parsed.success) {
     send(422, { ok: false, error: 'invalid_payload' });
     return;
   }
-  const lead = parsed.data;
+  const { website, formStartedAt, ...lead } = parsed.data;
+
+  // Бот получает правдоподобный успех, но его данные никуда не отправляются.
+  if (website?.trim() || isSuspiciouslyFast(formStartedAt) || isObviouslyAutomatedLead(lead)) {
+    send(200, { ok: true });
+    return;
+  }
 
   const telegramText = formatTelegramMessage(lead);
   const plainText = formatPlainText(lead);

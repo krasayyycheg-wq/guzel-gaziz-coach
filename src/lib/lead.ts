@@ -9,6 +9,8 @@ import { collectUtmParams } from '../utils/utm';
 
 export type LeadType = 'application' | 'quiz_contact' | 'quiz_result';
 
+const pageLoadedAt = Date.now();
+
 export interface LeadPayload {
   type: LeadType;
   name?: string;
@@ -21,6 +23,8 @@ export interface LeadPayload {
   page?: string;
   utm?: Record<string, string>;
   timestamp?: string;
+  website?: string;
+  formStartedAt?: number;
 }
 
 export async function sendLead(payload: LeadPayload): Promise<void> {
@@ -29,6 +33,7 @@ export async function sendLead(payload: LeadPayload): Promise<void> {
     page: payload.page ?? window.location.pathname,
     timestamp: payload.timestamp ?? new Date().toISOString(),
     utm: payload.utm ?? collectUtmParams(),
+    formStartedAt: payload.formStartedAt ?? pageLoadedAt,
   };
 
   const response = await fetch('/api/lead', {

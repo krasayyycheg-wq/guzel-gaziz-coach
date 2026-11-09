@@ -26,6 +26,7 @@ const applicationSchema = z.object({
     .max(50, 'Имя слишком длинное'),
   email: z.string().email('Введите корректный email'),
   phone: z.string().optional(),
+  website: z.string().optional(),
   // 152-ФЗ: согласие на обработку ПДн — обязательный, НЕ проставленный по умолчанию чекбокс
   personalDataConsent: z
     .boolean()
@@ -47,6 +48,7 @@ interface ApplicationFormProps {
 
 export function ApplicationForm({ program = 'general', compact = false }: ApplicationFormProps) {
   const [status, setStatus] = useState<FormStatus>('idle');
+  const [formStartedAt] = useState(() => Date.now());
   const formId = useId();
   const {
     register,
@@ -56,6 +58,7 @@ export function ApplicationForm({ program = 'general', compact = false }: Applic
   } = useForm<ApplicationFormData>({
     resolver: zodResolver(applicationSchema),
     defaultValues: {
+      website: '',
       personalDataConsent: false,
       marketingConsent: false,
     },
@@ -73,6 +76,8 @@ export function ApplicationForm({ program = 'general', compact = false }: Applic
         email: data.email,
         phone: data.phone,
         program,
+        website: data.website,
+        formStartedAt,
       });
       reachGoal('application_submit', { program });
       setStatus('success');
@@ -110,6 +115,21 @@ export function ApplicationForm({ program = 'general', compact = false }: Applic
     <form onSubmit={handleSubmit(onSubmit)} className={compact ? 'space-y-4' : 'space-y-5'}>
       {/* Скрытое поле — slug программы передаётся в payload из пропса */}
       <input type="hidden" value={program} readOnly />
+
+      {/* Honeypot: человек не видит поле, автозаполняющие форму боты часто его заполняют. */}
+      <div
+        aria-hidden="true"
+        style={{ position: 'absolute', left: '-10000px', width: '1px', height: '1px', overflow: 'hidden' }}
+      >
+        <label htmlFor={`${formId}-website`}>Ваш сайт</label>
+        <input
+          {...register('website')}
+          id={`${formId}-website`}
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+        />
+      </div>
 
       <div>
         <label htmlFor={`${formId}-name`} className="flex items-center gap-2 text-sm text-text-secondary mb-2">

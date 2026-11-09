@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "test:anti-spam": "node --test tests/anti-spam.test.ts",
     "preview": "vite preview"
   },
   "dependencies": {
